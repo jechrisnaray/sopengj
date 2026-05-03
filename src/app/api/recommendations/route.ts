@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     // Untuk demo, kita langsung kembalikan hasil
     return NextResponse.json(result)
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0].message }, { status: 400 })
     }

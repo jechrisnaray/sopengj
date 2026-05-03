@@ -15,8 +15,10 @@ import { id } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { Check, ArrowRight, ArrowLeft, CalendarDays, Clock, MessageSquare, CreditCard } from 'lucide-react'
 
+import { Consultant } from '@/types'
+
 interface BookingFormProps {
-  consultant: any
+  consultant: Consultant & { full_name: string }
 }
 
 export function BookingForm({ consultant }: BookingFormProps) {

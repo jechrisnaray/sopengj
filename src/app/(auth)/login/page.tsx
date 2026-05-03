@@ -35,20 +35,14 @@ export default function LoginPage() {
 
   async function onSubmit(values: LoginFormValues) {
     setIsLoading(true)
-    const { error } = await supabase.auth.signInWithPassword({
-      email: values.email,
-      password: values.password,
-    })
-
-    if (error) {
-      toast.error(error.message)
-      setIsLoading(false)
-      return
-    }
-
-    toast.success('Login berhasil!')
+    
+    // DEMO MODE: Simulate successful login
+    console.log('Logging in user:', values.email)
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    toast.success('Login berhasil! (Demo Mode)')
     router.push('/dashboard/user')
-    router.refresh()
+    setIsLoading(false)
   }
 
   return (

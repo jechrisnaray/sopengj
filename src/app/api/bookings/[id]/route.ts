@@ -3,8 +3,9 @@ import { createClient } from '@/lib/supabase/server'
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   const { status } = await request.json()
@@ -15,7 +16,7 @@ export async function PATCH(
   const { data: booking } = await supabase
     .from('bookings')
     .select('*, consultants(profile_id)')
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
   if (!booking) return NextResponse.json({ error: 'Booking not found' }, { status: 404 })
@@ -35,7 +36,7 @@ export async function PATCH(
   const { data, error } = await supabase
     .from('bookings')
     .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', params.id)
+    .eq('id', id)
     .select()
     .single()
 

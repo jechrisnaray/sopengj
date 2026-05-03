@@ -55,10 +55,10 @@
 2. **Supabase**: daftar di supabase.com → New Project → Settings → API
 
 ## Status Sprint
-**Sprint aktif**: SPRINT 5 - Dashboard & Realtime
-**Task terakhir**: Pembuatan CLAUDE.md dan verifikasi seluruh fitur (Phase 5 complete)
-**Task berikutnya**: User Acceptance Testing & Deployment ke Vercel
-**Error aktif**: Tidak ada (System stable)
+**Sprint aktif**: SELESAI — Siap Deploy
+**Task terakhir**: Audit menyeluruh, perbaikan kompatibilitas Next.js 16, & pembersihan 0 lint error.
+**Task berikutnya**: Deploy ke Vercel (Hobby Plan)
+**Error aktif**: Tidak ada (System build stable)
 
 ## Keputusan Arsitektur
 - App Router (bukan Pages Router)

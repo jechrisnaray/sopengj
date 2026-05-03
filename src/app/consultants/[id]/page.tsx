@@ -4,10 +4,12 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Star, ShieldCheck, MapPin, Globe } from 'lucide-react'
 import { notFound } from 'next/navigation'
+import { MOCK_CONSULTANTS } from '@/lib/data/mock-consultants'
 
-export default async function ConsultantProfilePage({ params }: { params: { id: string } }) {
+export default async function ConsultantProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params
   const supabase = await createClient()
-
+  
   // Fetch real consultant data
   const { data: consultant } = await supabase
     .from('consultants')
@@ -15,25 +17,22 @@ export default async function ConsultantProfilePage({ params }: { params: { id: 
       *,
       profiles:profile_id (full_name, avatar_url, bio)
     `)
-    .eq('id', params.id)
+    .eq('id', id)
     .single()
 
-  // Fallback for demo
-  if (!consultant && params.id.length > 5) return notFound()
-
-  const displayData = consultant ? {
-    ...consultant,
-    full_name: consultant.profiles.full_name,
-    avatar_url: consultant.profiles.avatar_url,
-    bio: consultant.profiles.bio || 'Ahli berpengalaman di bidangnya.'
-  } : {
-    id: params.id,
-    full_name: 'Konsultan Terpercaya',
-    specializations: ['Umum', 'Konsultasi'],
-    hourly_rate: 200000,
-    rating: 4.9,
-    avatar_url: '',
-    bio: 'Berpengalaman membantu ratusan klien mencapai tujuannya.'
+  // Fallback to Mock Data if not found in DB (Demo Mode)
+  let displayData: any = null
+  
+  if (consultant) {
+    displayData = {
+      ...consultant,
+      full_name: consultant.profiles.full_name,
+      avatar_url: consultant.profiles.avatar_url,
+      bio: consultant.profiles.bio || 'Ahli berpengalaman di bidangnya.'
+    }
+  } else {
+    const mock = MOCK_CONSULTANTS.find(c => c.id === id) || MOCK_CONSULTANTS[0]
+    displayData = mock
   }
 
   return (

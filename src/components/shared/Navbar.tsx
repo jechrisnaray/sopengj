@@ -16,8 +16,10 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Menu, X, User, LogOut, LayoutDashboard } from 'lucide-react'
 
+import { type User as SupabaseUser } from '@supabase/supabase-js'
+
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<SupabaseUser | null>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const supabase = createClient()
   const router = useRouter()

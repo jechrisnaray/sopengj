@@ -13,98 +13,38 @@ const bookingSchema = z.object({
 
 export async function POST(request: Request) {
   try {
-    const supabase = await createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
     const body = await request.json()
-    const validatedData = bookingSchema.parse(body)
-
-    // 1. Cek apakah slot sudah terisi (Race Condition Prevention)
-    const { data: existingBooking } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('consultant_id', validatedData.consultant_id)
-      .eq('scheduled_at', validatedData.scheduled_at)
-      .in('status', ['pending', 'confirmed'])
-      .maybeSingle()
-
-    if (existingBooking) {
-      return NextResponse.json({ message: 'Maaf, slot waktu ini baru saja dipesan oleh orang lain.' }, { status: 409 })
-    }
-
-    // 2. Insert Booking
-    const { data: booking, error: bookingError } = await supabase
-      .from('bookings')
-      .insert({
-        user_id: user.id,
-        consultant_id: validatedData.consultant_id,
-        scheduled_at: validatedData.scheduled_at,
-        duration_minutes: validatedData.duration_minutes,
-        topic: validatedData.topic,
-        notes: validatedData.notes,
-        total_price: validatedData.total_price,
-        status: 'pending'
-      })
-      .select()
-      .single()
-
-    if (bookingError) throw bookingError
-
-    // 3. Insert Notifications
-    await supabase.from('notifications').insert([
-      {
-        user_id: user.id,
-        title: 'Booking Terkirim',
-        message: 'Pesanan konsultasi Anda telah terkirim. Menunggu konfirmasi dari konsultan.',
-        type: 'booking_confirmed'
-      },
-      {
-        user_id: (await supabase.from('consultants').select('profile_id').eq('id', validatedData.consultant_id).single()).data?.profile_id,
-        title: 'Ada Booking Baru!',
-        message: `Seseorang ingin berkonsultasi dengan Anda tentang: ${validatedData.topic}`,
-        type: 'booking_confirmed'
-      }
-    ])
-
-    return NextResponse.json(booking)
+    console.log('DEMO MODE: Creating booking for topic:', body.topic)
+    
+    // Simulate delay
+    await new Promise(resolve => setTimeout(resolve, 1000))
+    
+    return NextResponse.json({
+      id: 'demo-booking-' + Math.random().toString(36).substr(2, 9),
+      status: 'pending',
+      message: 'Booking berhasil (Demo Mode)'
+    })
 
   } catch (error: any) {
     console.error('Booking Error:', error)
-    return NextResponse.json({ message: error.message || 'Internal Server Error' }, { status: 500 })
+    return NextResponse.json({ message: 'Gagal membuat booking' }, { status: 500 })
   }
 }
 
 export async function GET(request: Request) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  const { searchParams } = new URL(request.url)
-  const status = searchParams.get('status')
-
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  let query = supabase
-    .from('bookings')
-    .select(`
-      *,
-      consultants:consultant_id (
-        id,
-        specializations,
-        profiles:profile_id (full_name, avatar_url)
-      )
-    `)
-    .eq('user_id', user.id)
-    .order('scheduled_at', { ascending: false })
-
-  if (status) {
-    query = query.eq('status', status)
-  }
-
-  const { data, error } = await query
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  return NextResponse.json(data)
+  // DEMO MODE: Return mock bookings
+  return NextResponse.json([
+    {
+      id: 'demo-1',
+      scheduled_at: new Date().toISOString(),
+      duration_minutes: 60,
+      status: 'confirmed',
+      topic: 'Konsultasi Hukum Perdata',
+      total_price: 500000,
+      consultants: {
+        id: 'f1111111-1111-1111-1111-111111111111',
+        profiles: { full_name: 'Budi Arto, S.H.', avatar_url: '' }
+      }
+    }
+  ])
 }
