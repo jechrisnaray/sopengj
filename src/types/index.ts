@@ -4,64 +4,120 @@ export type ConsultationType = 'video' | 'chat' | 'phone';
 
 export interface Profile {
   id: string;
-  full_name: string;
+  fullName: string;
   email: string;
-  avatar_url?: string;
+  avatarUrl?: string;
   role: UserRole;
   bio?: string;
-  created_at: string;
-  updated_at: string;
+  phone?: string;
+  createdAt: number;
 }
 
 export interface Consultant {
   id: string;
-  profile_id: string;
-  specialization: string[];
-  experience_years: number;
-  hourly_rate: number;
+  profileId: string;
+  specializations: string[];
+  experienceYears: number;
+  hourlyRate: number;
   rating: number;
-  total_reviews: number;
-  is_available: boolean;
-  languages: string[];
-  education?: string;
-  certifications?: string[];
-  consultation_types: ConsultationType[];
-  created_at: string;
-  profiles?: Profile; // Joined data
+  totalReviews: number;
+  isAvailable: boolean;
+  languages?: string[];
+  bio: string;
+  about?: string;
+  location?: string;
+  fullName?: string; // Flattened
+  avatarUrl?: string; // Flattened
 }
 
 export interface Availability {
   id: string;
-  consultant_id: string;
-  day_of_week: number; // 0-6
-  start_time: string;
-  end_time: string;
-  is_active: boolean;
+  consultantId: string;
+  dayOfWeek: number; // 0-6
+  slots: { start: string; end: string }[];
+  isActive: boolean;
 }
 
 export interface Booking {
   id: string;
-  user_id: string;
-  consultant_id: string;
-  scheduled_at: string;
-  duration_minutes: number;
+  userId: string;
+  consultantId: string;
+  scheduledAt: string;
+  durationMinutes: number;
   status: BookingStatus;
-  consultation_type: ConsultationType;
   topic: string;
   notes?: string;
-  total_price: number;
-  meeting_url?: string;
-  created_at: string;
-  user_profile?: Profile; // Joined data
-  consultants?: Consultant; // Joined data
+  totalPrice: number;
+  paymentStatus: 'unpaid' | 'paid' | 'refunded';
+  meetingLink?: string;
+  createdAt: number;
+  consultantName?: string; // Flattened
+  consultantAvatar?: string; // Flattened
+  userName?: string; // Flattened
+  userAvatar?: string; // Flattened
 }
 
 export interface Review {
   id: string;
-  booking_id: string;
-  reviewer_id: string;
-  consultant_id: string;
+  bookingId: string;
+  userId: string;
+  consultantId: string;
   rating: number;
-  comment?: string;
-  created_at: string;
+  comment: string;
+  createdAt: number;
+  userName?: string;
+  userAvatar?: string;
+}
+
+export interface Notification {
+  id: string;
+  userId: string;
+  title: string;
+  message: string;
+  isRead: boolean;
+  type: string;
+  link?: string;
+  createdAt: number;
+}
+
+export interface Message {
+  id: string;
+  bookingId: string;
+  senderId: string;
+  content: string;
+  type: 'text' | 'file' | 'system';
+  fileUrl?: string;
+  createdAt: number;
+}
+
+// AI Recommendation types
+export interface ConsultantForAI {
+  id: string
+  fullName: string
+  specializations: string[]
+  experienceYears: number
+  rating: number
+  totalReviews: number
+  hourlyRate: number
+  isAvailable: boolean
+  languages: string[]
+}
+
+export interface AIRecommendation {
+  consultantId: string
+  score: number
+  reason: string 
+  matchedKeywords: string[]
+}
+
+export interface RecommendationResult {
+  recommendations: AIRecommendation[]
+  source: 'groq' | 'manual'
+  cached: boolean
+}
+
+export interface RecommendationRequest {
+  problem: string
+  budget?: number
+  preferOnline?: boolean
 }

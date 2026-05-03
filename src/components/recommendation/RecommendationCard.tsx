@@ -1,70 +1,104 @@
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Sparkles, ArrowRight, Star } from "lucide-react"
-import Link from "next/link"
-import { formatRupiah } from "@/lib/utils/format"
+'use client'
+
+import Link from 'next/link'
+import { Star, Clock, Award, ChevronRight } from 'lucide-react'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
+import { Id } from '../../../convex/_generated/dataModel'
+import type { AIRecommendation } from '@/types'
 
 interface RecommendationCardProps {
-  recommendation: {
-    consultant_id: string
-    score: number
-    reasons: string[]
-    best_slots: string[]
-  }
-  consultant: any
+  recommendation: AIRecommendation
+  rank: number
 }
 
-export function RecommendationCard({ recommendation, consultant }: RecommendationCardProps) {
+const RANK_COLORS = {
+  1: 'bg-yellow-400 text-yellow-900',
+  2: 'bg-slate-300 text-slate-700',
+  3: 'bg-orange-300 text-orange-800',
+}
+
+export function RecommendationCard({ recommendation, rank }: RecommendationCardProps) {
+  const consultant = useQuery(api.consultants.getById, { 
+    id: recommendation.consultantId as Id<"consultants"> 
+  })
+
+  if (consultant === undefined) {
+    return (
+      <div className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse h-32" />
+    )
+  }
+
+  if (!consultant) return null
+
+  const formatRupiah = (n: number) =>
+    new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(n)
+
   return (
-    <Card className="border-blue-100 bg-gradient-to-br from-blue-50/50 to-white shadow-md transition-all hover:shadow-lg">
-      <CardContent className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <Badge className="bg-blue-600 text-white flex items-center gap-1 py-1">
-            <Sparkles className="h-3 w-3 fill-current" />
-            <span>{recommendation.score}% Cocok</span>
-          </Badge>
-          <div className="flex items-center gap-1 text-amber-500 font-bold text-sm">
-            <Star className="h-4 w-4 fill-current" />
-            <span>{consultant?.rating}</span>
-          </div>
+    <div className="bg-white rounded-2xl border border-slate-200 hover:border-blue-300 hover:shadow-md transition p-5">
+      <div className="flex items-start gap-4">
+
+        {/* Rank badge */}
+        <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${RANK_COLORS[rank as keyof typeof RANK_COLORS] ?? 'bg-slate-200 text-slate-600'}`}>
+          #{rank}
         </div>
 
-        <div className="flex items-center gap-4 mb-4">
-          <Avatar className="h-14 w-14 border-2 border-blue-200">
-            <AvatarImage src={consultant?.avatar_url} />
-            <AvatarFallback>{consultant?.full_name?.charAt(0)}</AvatarFallback>
-          </Avatar>
-          <div>
-            <h4 className="font-bold text-slate-900">{consultant?.full_name}</h4>
-            <p className="text-xs text-blue-600 font-medium">
-              {consultant?.specializations?.join(', ')}
+        {/* Avatar */}
+        <div className="w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-lg shrink-0 shadow-sm">
+          {consultant.fullName?.charAt(0)?.toUpperCase()}
+        </div>
+
+        {/* Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h4 className="font-bold text-slate-900 truncate">
+                {consultant.fullName}
+              </h4>
+              <p className="text-sm text-slate-500 mt-0.5">
+                {consultant.specializations?.slice(0, 2).join(' · ')}
+              </p>
+            </div>
+
+            {/* Score badge */}
+            <div className="shrink-0 flex items-center gap-1 bg-blue-50 text-blue-700 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-tighter">
+              <Award size={10} />
+              {Math.round(recommendation.score)}% cocok
+            </div>
+          </div>
+
+          {/* Stats */}
+          <div className="flex items-center gap-4 mt-2 text-xs text-slate-500 font-medium">
+            <span className="flex items-center gap-1">
+              <Star size={12} className="text-amber-400 fill-amber-400" />
+              {Number(consultant.rating).toFixed(1)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock size={12} />
+              {consultant.experienceYears} thn
+            </span>
+            <span className="font-bold text-slate-900">
+              {formatRupiah(consultant.hourlyRate)}/jam
+            </span>
+          </div>
+
+          {/* AI reason */}
+          <div className="mt-3 bg-slate-50 p-3 rounded-xl border border-slate-100">
+            <p className="text-xs text-slate-600 italic leading-relaxed">
+              "{recommendation.reason}"
             </p>
           </div>
-        </div>
 
-        <div className="space-y-2 mb-6">
-          {recommendation.reasons.map((reason, i) => (
-            <div key={i} className="flex items-start gap-2 text-xs text-slate-600">
-              <div className="mt-1 h-1 w-1 rounded-full bg-blue-400 shrink-0" />
-              <p>{reason}</p>
-            </div>
-          ))}
+          {/* CTA */}
+          <Link
+            href={`/consultants/${recommendation.consultantId}`}
+            className="inline-flex items-center gap-1 mt-4 text-xs font-bold text-blue-600 hover:text-blue-700 transition uppercase tracking-widest"
+          >
+            Lihat Profil
+            <ChevronRight size={14} />
+          </Link>
         </div>
-
-        <div className="flex items-center justify-between border-t pt-4">
-          <p className="text-sm font-bold text-slate-900">
-            {formatRupiah(consultant?.hourly_rate || 0)}
-            <span className="text-[10px] font-normal text-slate-400">/jam</span>
-          </p>
-          <Button size="sm" className="bg-blue-600 hover:bg-blue-700 h-8" asChild>
-            <Link href={`/consultants/${recommendation.consultant_id}`}>
-              Pilih <ArrowRight className="ml-1 h-3 w-3" />
-            </Link>
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

@@ -1,3 +1,5 @@
+import { RecommendationSection } from '@/components/recommendation/RecommendationSection'
+import { createClient } from '@/lib/supabase/server'
 import { ConsultantList } from '@/components/consultant/ConsultantList'
 import { ErrorBoundary } from '@/components/shared/ErrorBoundary'
 import { Sparkles } from 'lucide-react'
@@ -7,7 +9,12 @@ export const metadata = {
   description: 'Temukan ahli profesional untuk solusi masalah Anda.',
 }
 
-export default function ConsultantsPage() {
+export default async function ConsultantsPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   return (
     <div className="bg-slate-50/50 min-h-screen pb-20">
       {/* Header Section */}
@@ -25,6 +32,9 @@ export default function ConsultantsPage() {
           </p>
         </div>
       </div>
+
+      {/* AI Recommendation Section */}
+      <RecommendationSection />
 
       {/* Main Content */}
       <div className="container mx-auto px-4">

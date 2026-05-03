@@ -1,94 +1,93 @@
 import Groq from 'groq-sdk'
-import { ConsultantData, ConsultantScore, scoreConsultants, UserNeeds } from './scoring'
+import type { ConsultantForAI, AIRecommendation } from '@/types'
 
-const groq = new Groq({
-  apiKey: process.env.GROQ_API_KEY,
-})
+// Lazy init — hanya dibuat saat pertama kali dipanggil
+let groqClient: Groq | null = null
 
-interface RecommendationResponse {
-  recommendations: {
-    consultant_id: string
-    match_score: number
-    reasons: string[]
-    best_time_suggestion: string
-    personalized_message: string
-  }[]
-  general_tip: string
+function getGroqClient(): Groq {
+  if (!groqClient) {
+    if (!process.env.GROQ_API_KEY) {
+      throw new Error('GROQ_API_KEY tidak ditemukan di environment variables')
+    }
+    groqClient = new Groq({ apiKey: process.env.GROQ_API_KEY })
+  }
+  return groqClient
 }
 
-export async function getAIRecommendations(
-  needs: UserNeeds,
-  consultants: ConsultantData[]
-): Promise<{ recommendations: ConsultantScore[], generalTip: string, isFallback: boolean }> {
-  try {
-    const prompt = `
-      SYSTEM:
-      Kamu adalah asisten rekomendasi konsultan profesional yang berbahasa Indonesia. 
-      Tugasmu menganalisis kebutuhan user dan mencocokkan dengan daftar konsultan yang tersedia.
-      Selalu return dalam format JSON yang valid, tidak ada teks lain.
+export async function getGroqRecommendations(
+  problem: string,
+  consultants: ConsultantForAI[],
+  budget?: number
+): Promise<AIRecommendation[]> {
+  const groq = getGroqClient()
 
-      USER:
-      Kebutuhan user: ${needs.topic}
-      Budget per jam: ${needs.budget ? `Rp ${needs.budget}` : 'Tidak ditentukan'}
-      Preferensi waktu: ${needs.preferredTime || 'Fleksibel'}
+  const consultantList = consultants.map(c => ({
+    id: c.id,
+    nama: c.fullName,
+    spesialisasi: c.specializations,
+    pengalaman: `${c.experienceYears} tahun`,
+    rating: c.rating,
+    totalUlasan: c.totalReviews,
+    hargaPerJam: c.hourlyRate,
+    tersedia: c.isAvailable,
+  }))
 
-      Daftar konsultan tersedia:
-      ${JSON.stringify(consultants.map(c => ({
-        id: c.id,
-        name: c.full_name,
-        specs: c.specializations,
-        rate: c.hourly_rate,
-        rating: c.rating
-      })))}
+  const systemPrompt = `Kamu adalah sistem rekomendasi konsultan profesional untuk platform KonsulIn Indonesia.
+Tugasmu adalah menganalisis masalah yang dideskripsikan user dan merekomendasikan 3 konsultan terbaik dari daftar yang tersedia.
+Jawab HANYA dengan JSON valid, tanpa teks tambahan, tanpa markdown, tanpa backtick.`
 
-      Pilih TOP 3 konsultan yang paling cocok. Format response:
-      {
-        "recommendations": [
-          {
-            "consultant_id": "string",
-            "match_score": 0-100,
-            "reasons": ["string"],
-            "best_time_suggestion": "string",
-            "personalized_message": "string"
-          }
-        ],
-        "general_tip": "string"
-      }
-    `
+  const userPrompt = `Masalah user: "${problem}"
+${budget ? `Budget maksimal: Rp ${budget.toLocaleString('id-ID')}/jam` : ''}
 
-    const completion = await groq.chat.completions.create({
-      messages: [{ role: 'user', content: prompt }],
-      model: 'llama-3.3-70b-versatile',
-      response_format: { type: 'json_object' },
-    })
+Daftar konsultan tersedia:
+${JSON.stringify(consultantList, null, 2)}
 
-    const responseContent = completion.choices[0]?.message?.content
-    if (!responseContent) throw new Error('Empty response from AI')
-
-    const data = JSON.parse(responseContent) as RecommendationResponse
-
-    return {
-      recommendations: data.recommendations.map(r => ({
-        consultant_id: r.consultant_id,
-        score: r.match_score,
-        reasons: r.reasons,
-        best_slots: [r.best_time_suggestion],
-        personalized_message: r.personalized_message
-      })),
-      generalTip: data.general_tip,
-      isFallback: false
+Berikan rekomendasi dalam format JSON ini PERSIS:
+{
+  "recommendations": [
+    {
+      "consultantId": "uuid-konsultan",
+      "score": 85,
+      "reason": "Alasan singkat dalam Bahasa Indonesia, maksimal 2 kalimat mengapa konsultan ini cocok.",
+      "matchedKeywords": ["keyword1", "keyword2"]
     }
+  ]
+}
 
-  } catch (error: any) {
-    console.error('Groq API Error, falling back to manual scoring:', error)
-    
-    // Menggunakan algoritma manual sebagai fallback
-    const manualResults = scoreConsultants(needs, consultants).slice(0, 3)
-    
-    return {
-      recommendations: manualResults,
-      generalTip: 'Tetap tenang dan siapkan daftar pertanyaan Anda sebelum sesi dimulai.',
-      isFallback: true
-    }
+Rules:
+- Pilih tepat 3 konsultan terbaik
+- Prioritaskan yang tersedia (tersedia: true)
+- Score 0-100, lebih tinggi = lebih cocok
+- Reason dalam Bahasa Indonesia yang natural dan meyakinkan
+- Jika budget ada, hindari konsultan yang harganya jauh melampaui budget`
+
+  const response = await groq.chat.completions.create({
+    model: 'llama-3.3-70b-versatile',
+    messages: [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: userPrompt },
+    ],
+    temperature: 0.3,
+    max_tokens: 1000,
+    response_format: { type: 'json_object' },
+  })
+
+  const content = response.choices[0]?.message?.content
+  if (!content) throw new Error('Groq mengembalikan response kosong')
+
+  const parsed = JSON.parse(content)
+
+  if (!parsed.recommendations || !Array.isArray(parsed.recommendations)) {
+    throw new Error('Format response Groq tidak valid')
   }
+
+  // Validasi: pastikan consultantId valid
+  const validIds = new Set(consultants.map(c => c.id))
+  const valid = parsed.recommendations.filter((r: AIRecommendation) =>
+    validIds.has(r.consultantId)
+  )
+
+  if (valid.length === 0) throw new Error('Tidak ada rekomendasi valid dari Groq')
+
+  return valid.slice(0, 3)
 }

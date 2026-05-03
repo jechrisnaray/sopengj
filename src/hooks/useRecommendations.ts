@@ -1,27 +1,26 @@
 import { useMutation } from '@tanstack/react-query'
+import type { RecommendationResult, RecommendationRequest } from '@/types'
 
-interface RecommendationParams {
-  topic: string
-  budget: number
-  time: string
-}
-
-async function fetchRecommendations(params: RecommendationParams) {
-  const response = await fetch('/api/recommendations', {
+async function fetchRecommendations(
+  req: RecommendationRequest
+): Promise<RecommendationResult> {
+  const res = await fetch('/api/ai/recommend', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(params),
+    body: JSON.stringify(req),
   })
 
-  if (!response.ok) {
-    throw new Error('Gagal mendapatkan rekomendasi')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error ?? 'Gagal mendapatkan rekomendasi')
   }
 
-  return response.json()
+  return res.json()
 }
 
 export function useRecommendations() {
   return useMutation({
     mutationFn: fetchRecommendations,
+    retry: 1,
   })
 }

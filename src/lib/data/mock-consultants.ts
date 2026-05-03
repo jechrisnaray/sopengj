@@ -1,6 +1,8 @@
 import { Consultant } from '@/types'
 
-export const MOCK_CONSULTANTS: (Consultant & { full_name: string, avatar_url: string, bio: string })[] = [
+type MockConsultant = Consultant & { full_name: string; avatar_url: string; bio: string }
+
+export const MOCK_CONSULTANTS: MockConsultant[] = [
   {
     id: 'f1111111-1111-1111-1111-111111111111',
     profile_id: 'a1111111-1111-1111-1111-111111111111',
@@ -10,7 +12,8 @@ export const MOCK_CONSULTANTS: (Consultant & { full_name: string, avatar_url: st
     specializations: ['Hukum', 'Perdata', 'Korporat'],
     hourly_rate: 500000,
     rating: 4.9,
-    is_available: true
+    total_reviews: 128,
+    is_available: true,
   },
   {
     id: 'f2222222-2222-2222-2222-222222222222',
@@ -21,7 +24,8 @@ export const MOCK_CONSULTANTS: (Consultant & { full_name: string, avatar_url: st
     specializations: ['Keuangan', 'Investasi', 'Pajak'],
     hourly_rate: 350000,
     rating: 4.8,
-    is_available: true
+    total_reviews: 94,
+    is_available: true,
   },
   {
     id: 'f3333333-3333-3333-3333-333333333333',
@@ -32,7 +36,8 @@ export const MOCK_CONSULTANTS: (Consultant & { full_name: string, avatar_url: st
     specializations: ['Psikologi', 'Kesehatan Mental'],
     hourly_rate: 300000,
     rating: 4.9,
-    is_available: true
+    total_reviews: 210,
+    is_available: true,
   },
   {
     id: 'f4444444-4444-4444-4444-444444444444',
@@ -43,7 +48,8 @@ export const MOCK_CONSULTANTS: (Consultant & { full_name: string, avatar_url: st
     specializations: ['Karir', 'HRD', 'Resume'],
     hourly_rate: 250000,
     rating: 4.7,
-    is_available: true
+    total_reviews: 76,
+    is_available: true,
   },
   {
     id: 'f5555555-5555-5555-5555-555555555555',
@@ -54,6 +60,7 @@ export const MOCK_CONSULTANTS: (Consultant & { full_name: string, avatar_url: st
     specializations: ['Bisnis', 'Startup', 'Strategi'],
     hourly_rate: 750000,
     rating: 5.0,
-    is_available: true
-  }
+    total_reviews: 45,
+    is_available: true,
+  },
 ]

@@ -1,262 +1,215 @@
 'use client'
 
 import { useState } from 'react'
-import Link from 'next/link'
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Textarea } from '@/components/ui/textarea'
-import { Slider } from '@/components/ui/slider'
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
-import { Label } from '@/components/ui/label'
-import { Progress } from '@/components/ui/progress'
-import { Badge } from '@/components/ui/badge'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { Skeleton } from '@/components/ui/skeleton'
-import { formatRupiah } from '@/lib/utils/format'
-import { Sparkles, Star, Clock, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react'
+import { useRecommendations } from '@/hooks/useRecommendations'
+import { RecommendationCard } from './RecommendationCard'
+import { Sparkles, Loader2, AlertCircle, Lock } from 'lucide-react'
 import { toast } from 'sonner'
+import Link from 'next/link'
+import { useCurrentUser } from '@/hooks/useCurrentUser'
 
-interface Recommendation {
-  consultant_id: string
-  score: number
-  reasons: string[]
-  best_slots: string[]
-  personalized_message?: string
-  consultant_info?: any // Will be merged from original data
-}
+export function RecommendationSection() {
+  const { user, isLoading: isAuthLoading } = useCurrentUser()
+  const [problem, setProblem] = useState('')
+  const [budget, setBudget] = useState('')
+  const { mutate, data, isPending, isError, error, reset } = useRecommendations()
 
-export default function RecommendationSection() {
-  const [description, setDescription] = useState('')
-  const [budget, setBudget] = useState([250000])
-  const [time, setTime] = useState('fleksibel')
-  const [isLoading, setIsLoading] = useState(false)
-  const [results, setResults] = useState<any>(null)
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
 
-  const handleGetRecommendation = async () => {
-    if (description.length < 10) {
-      toast.error('Ceritakan masalah Anda minimal 10 karakter')
+    if (problem.trim().length < 10) {
+      toast.error('Deskripsikan masalah Anda minimal 10 karakter')
       return
     }
 
-    setIsLoading(true)
-    try {
-      // 1. Get Recommendations
-      const response = await fetch('/api/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          description,
-          budget: budget[0],
-          preferredTime: time === 'fleksibel' ? undefined : time,
-        }),
-      })
-
-      const data = await response.json()
-      if (!response.ok) throw new Error(data.error)
-      
-      // 2. Fetch All Consultants to merge info
-      const consResponse = await fetch('/api/consultants')
-      const consultants = await consResponse.json()
-
-      // 3. Merge data
-      const mergedRecommendations = data.recommendations.map((rec: Recommendation) => {
-        const fullInfo = consultants.find((c: any) => c.id === rec.consultant_id)
-        return {
-          ...rec,
-          consultant_info: fullInfo
-        }
-      })
-
-      setResults({ ...data, recommendations: mergedRecommendations })
-      toast.success('Rekomendasi berhasil dibuat!')
-    } catch (error: any) {
-      toast.error(error.message || 'Gagal mendapatkan rekomendasi')
-    } finally {
-      setIsLoading(false)
-    }
+    reset()
+    mutate(
+      {
+        problem: problem.trim(),
+        budget: budget ? parseInt(budget.replace(/\D/g, '')) : undefined,
+      },
+      {
+        onError: (err) => {
+          toast.error('Gagal mendapatkan rekomendasi', {
+            description: err.message,
+          })
+        },
+      }
+    )
   }
 
   return (
-    <div className="space-y-8 py-8">
-      {/* Input Form */}
-      <Card className="border-blue-100 bg-blue-50/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-blue-600" />
-            Temukan Konsultan dengan AI
-          </CardTitle>
-          <CardDescription>
-            Ceritakan masalah Anda, AI kami akan mencocokkan Anda dengan ahli yang paling tepat.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <Label>Masalah yang ingin dikonsultasikan</Label>
-            <Textarea 
-              placeholder="Contoh: Saya sedang mencari saran karir untuk pindah dari akuntansi ke data science, saya butuh bantuan menyusun roadmap belajar..."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-[100px] bg-white"
-            />
+    <section className="py-16 bg-gradient-to-b from-blue-50 to-white">
+      <div className="max-w-4xl mx-auto px-4">
+
+        {/* Header */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center gap-2 bg-blue-100 text-blue-700 px-4 py-1.5 rounded-full text-sm font-medium mb-4">
+            <Sparkles size={14} />
+            Didukung AI
           </div>
-
-          <div className="grid gap-6 md:grid-cols-2">
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <Label>Budget per jam</Label>
-                <span className="text-sm font-medium text-blue-600">{formatRupiah(budget[0])}</span>
-              </div>
-              <Slider 
-                value={budget} 
-                onValueChange={(val) => setBudget(Array.isArray(val) ? val : [val])} 
-                max={500000} 
-                min={50000} 
-                step={10000} 
-              />
-            </div>
-
-            <div className="space-y-4">
-              <Label>Preferensi Waktu</Label>
-              <RadioGroup value={time} onValueChange={setTime} className="flex flex-wrap gap-4">
-                {['fleksibel', 'pagi', 'siang', 'sore', 'malam'].map((t) => (
-                  <div key={t} className="flex items-center space-x-2">
-                    <RadioGroupItem value={t} id={t} />
-                    <Label htmlFor={t} className="capitalize">{t}</Label>
-                  </div>
-                ))}
-              </RadioGroup>
-            </div>
-          </div>
-        </CardContent>
-        <CardFooter>
-          <Button 
-            onClick={handleGetRecommendation} 
-            disabled={isLoading}
-            className="w-full bg-blue-600 hover:bg-blue-700"
-          >
-            {isLoading ? 'AI sedang menganalisis...' : 'Dapatkan Rekomendasi AI ✨'}
-          </Button>
-        </CardFooter>
-      </Card>
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="grid gap-6 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Card key={i} className="overflow-hidden">
-              <div className="p-6 space-y-4">
-                <Skeleton className="h-4 w-1/2" />
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-3 w-16" />
-                  </div>
-                </div>
-                <Skeleton className="h-2 w-full" />
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-full" />
-                  <Skeleton className="h-3 w-full" />
-                </div>
-              </div>
-            </Card>
-          ))}
+          <h2 className="text-3xl font-bold text-slate-900 mb-3">
+            Temukan Konsultan yang Tepat
+          </h2>
+          <p className="text-slate-500 max-w-xl mx-auto">
+            Ceritakan masalah Anda, AI kami akan mencocokkan dengan konsultan
+            paling sesuai dari ratusan profesional tersedia
+          </p>
         </div>
-      )}
 
-      {/* Results */}
-      {results && !isLoading && (
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xl font-bold text-slate-900">Hasil Rekomendasi</h3>
-            {results.isFallback && (
-              <span className="text-xs text-slate-500 flex items-center gap-1">
-                <AlertCircle className="h-3 w-3" />
-                Rekomendasi berdasarkan algoritma matching
-              </span>
-            )}
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3">
-            {results.recommendations.map((rec: Recommendation) => (
-              <Card key={rec.consultant_id} className="relative overflow-hidden border-blue-100 transition-all hover:shadow-lg">
-                <div className="absolute top-0 right-0 p-2">
-                  <Badge variant="secondary" className="bg-blue-100 text-blue-700 text-[10px]">
-                    <Sparkles className="mr-1 h-3 w-3" /> Rekomendasi AI
-                  </Badge>
+        {/* Form */}
+        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 md:p-8">
+          {!user ? (
+            // Belum login — tampilkan lock state
+            <div className="text-center py-8">
+              <div className="w-12 h-12 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Lock size={20} className="text-slate-400" />
+              </div>
+              <p className="text-slate-700 font-medium mb-2">
+                Masuk untuk menggunakan fitur AI
+              </p>
+              <p className="text-slate-400 text-sm mb-6">
+                Rekomendasi AI hanya tersedia untuk pengguna yang sudah login
+              </p>
+              
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition"
+              >
+                Masuk Sekarang
+              </Link>
+            </div>
+          ) : (
+            // Sudah login — tampilkan form
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Textarea masalah */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Ceritakan masalah Anda
+                </label>
+                <textarea
+                  value={problem}
+                  onChange={e => setProblem(e.target.value)}
+                  placeholder="Contoh: Saya ingin memulai bisnis online tapi bingung soal legalitas dan perizinan usaha. Butuh panduan dari awal..."
+                  rows={4}
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition resize-none"
+                />
+                <p className="text-xs text-slate-400 text-right">
+                  {problem.length}/1000 karakter
+                </p>
+              </div>
+
+              {/* Budget opsional */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-slate-700">
+                  Budget per jam{' '}
+                  <span className="text-slate-400 font-normal">(opsional)</span>
+                </label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">
+                    Rp
+                  </span>
+                  <input
+                    type="text"
+                    value={budget}
+                    onChange={e => {
+                      // Format otomatis dengan titik ribuan
+                      const raw = e.target.value.replace(/\D/g, '')
+                      setBudget(
+                        raw ? parseInt(raw).toLocaleString('id-ID') : ''
+                      )
+                    }}
+                    placeholder="500.000"
+                    className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent focus:bg-white transition"
+                  />
                 </div>
-                
-                <CardHeader className="pb-2">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                      <AvatarImage src={rec.consultant_info?.avatar_url} />
-                      <AvatarFallback className="bg-blue-50 text-blue-600">
-                        {rec.consultant_info?.full_name?.charAt(0) || 'C'}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div>
-                      <CardTitle className="text-base truncate max-w-[150px]">
-                        {rec.consultant_info?.full_name || 'Ahli Terpilih'}
-                      </CardTitle>
-                      <div className="flex items-center gap-1 text-sm text-amber-500">
-                        <Star className="h-3 w-3 fill-current" />
-                        <span className="text-slate-600 font-medium text-xs">
-                          {rec.consultant_info?.rating || '0'} • Skor: {rec.score}%
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
-                
-                <CardContent className="space-y-4 pb-4">
-                  <div className="space-y-1">
-                    <Progress value={rec.score} className={`h-1.5 ${
-                      rec.score > 70 ? 'bg-green-100 [&>div]:bg-green-500' : 
-                      rec.score > 50 ? 'bg-amber-100 [&>div]:bg-amber-500' : 'bg-red-100 [&>div]:bg-red-500'
-                    }`} />
-                  </div>
+              </div>
 
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Kenapa Cocok?</p>
-                    <ul className="space-y-1">
-                      {rec.reasons.slice(0, 2).map((reason, idx) => (
-                        <li key={idx} className="flex items-start gap-2 text-xs text-slate-600">
-                          <CheckCircle2 className="mt-0.5 h-3 w-3 shrink-0 text-blue-500" />
-                          {reason}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
+              {/* Submit */}
+              <button
+                type="submit"
+                disabled={isPending || problem.trim().length < 10}
+                className="w-full flex items-center justify-center gap-2 py-3 px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-300 text-white font-semibold rounded-xl transition"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    AI sedang menganalisis...
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={18} />
+                    Cari Konsultan Terbaik
+                  </>
+                )}
+              </button>
+            </form>
+          )}
+        </div>
 
-                  {rec.personalized_message && (
-                    <div className="rounded-lg bg-slate-50 p-3 text-[11px] italic text-slate-600 border-l-2 border-blue-400">
-                      "{rec.personalized_message}"
-                    </div>
-                  )}
+        {/* Error state */}
+        {isError && (
+          <div className="mt-6 flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl text-red-700">
+            <AlertCircle size={18} className="shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-sm">Rekomendasi gagal dimuat</p>
+              <p className="text-sm text-red-600 mt-0.5">{error?.message}</p>
+            </div>
+          </div>
+        )}
 
-                  <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                    <Clock className="h-3 w-3" />
-                    <span>Waktu terbaik: {rec.best_slots[0]}</span>
+        {/* Loading skeleton */}
+        {isPending && (
+          <div className="mt-8 space-y-4">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-white rounded-2xl border border-slate-200 p-5 animate-pulse">
+                <div className="flex gap-4">
+                  <div className="w-14 h-14 bg-slate-200 rounded-full shrink-0" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-4 bg-slate-200 rounded w-1/3" />
+                    <div className="h-3 bg-slate-200 rounded w-1/2" />
+                    <div className="h-3 bg-slate-200 rounded w-3/4" />
                   </div>
-                </CardContent>
-                
-                <CardFooter className="pt-0">
-                  <Button className="w-full group" variant="outline" size="sm" asChild>
-                    <Link href={`/consultants/${rec.consultant_id}?book=true`}>
-                      Booking Sekarang
-                      <ArrowRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-1" />
-                    </Link>
-                  </Button>
-                </CardFooter>
-              </Card>
+                </div>
+              </div>
             ))}
           </div>
-          
-          <div className="rounded-lg border border-dashed p-4 text-center">
-            <p className="text-sm text-slate-600 italic">"💡 {results.generalTip}"</p>
+        )}
+
+        {/* Hasil rekomendasi */}
+        {data && !isPending && data.recommendations.length > 0 && (
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold text-slate-900">
+                Top 3 Konsultan untuk Anda
+              </h3>
+              <span className="text-xs text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
+                {data.source === 'groq' ? '✨ Dianalisis AI' : '📊 Berdasarkan data'}
+                {data.cached && ' · dari cache'}
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {data.recommendations.map((rec, index) => (
+                <RecommendationCard
+                  key={rec.consultantId}
+                  recommendation={rec}
+                  rank={index + 1}
+                />
+              ))}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+
+        {/* Empty state */}
+        {data && !isPending && data.recommendations.length === 0 && (
+          <div className="mt-8 text-center py-10 text-slate-400">
+            <p className="text-lg">😕 Tidak ada konsultan yang cocok</p>
+            <p className="text-sm mt-2">Coba ubah deskripsi masalah atau hapus filter budget</p>
+          </div>
+        )}
+
+      </div>
+    </section>
   )
 }

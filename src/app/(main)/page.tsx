@@ -1,8 +1,15 @@
+import { RecommendationSection } from '@/components/recommendation/RecommendationSection'
+import { createClient } from '@/lib/supabase/server'
 import Link from 'next/link'
 import { Button } from '@/components/ui/button'
-import { Shield, Zap, Star, Clock, CheckCircle2, ArrowRight, Quote } from 'lucide-react'
+import { Shield, Zap, Star, Clock, ArrowRight, Quote } from 'lucide-react'
 
-export default function HomePage() {
+export default async function HomePage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
@@ -26,6 +33,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* AI Recommendation Section */}
+      <RecommendationSection user={user} />
 
       {/* Stats Section */}
       <section className="border-y bg-white py-12">

@@ -1,7 +1,8 @@
 'use client'
 
 import { useState } from 'react'
-import { useConsultants } from '@/hooks/useConsultants'
+import { useQuery } from 'convex/react'
+import { api } from '../../../convex/_generated/api'
 import { ConsultantCard } from './ConsultantCard'
 import { ConsultantFilter } from './ConsultantFilter'
 import { LoadingSpinner } from '@/components/shared/LoadingSpinner'
@@ -13,12 +14,13 @@ export function ConsultantList() {
   const [sortBy, setSortBy] = useState('rating')
   const [isAvailableOnly, setIsAvailableOnly] = useState(false)
 
-  const { data: consultants, isLoading, error } = useConsultants({
+  const consultants = useQuery(api.consultants.list, {
     specialization: specialization === 'Semua' ? undefined : specialization,
     search: search || undefined,
-    sort: sortBy,
-    isAvailable: isAvailableOnly || undefined
   })
+
+  const isLoading = consultants === undefined
+  const error = null // Convex handle error via UI or error boundary usually
 
   return (
     <div className="grid gap-8 lg:grid-cols-3">

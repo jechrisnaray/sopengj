@@ -1,38 +1,40 @@
-'use client'
+"use client";
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
-import { AvailabilityCalendar } from './AvailabilityCalendar'
-import { TimeSlotPicker } from './TimeSlotPicker'
 import { format } from 'date-fns'
-import { id } from 'date-fns/locale'
+import { id as localeId } from 'date-fns/locale'
 import { toast } from 'sonner'
 import { formatRupiah } from '@/lib/utils/format'
 import { Check, ArrowRight, ArrowLeft, CalendarDays, Clock, MessageSquare, CreditCard } from 'lucide-react'
-
-import { Consultant } from '@/types'
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface BookingFormProps {
-  consultant: Consultant & { full_name: string }
+  consultant: any; // Using any for flexibility during migration
 }
 
 export function BookingForm({ consultant }: BookingFormProps) {
   const router = useRouter()
+  const { profile } = useCurrentUser()
+  const createBooking = useMutation(api.bookings.create)
+
   const [step, setStep] = useState(1)
-  const [date, setDate] = useState<Date>()
-  const [slot, setSlot] = useState<string>()
+  const [date, setDate] = useState<Date>(new Date(Date.now() + 86400000))
+  const [slot, setSlot] = useState<string>('09:00')
   const [duration, setDuration] = useState('60')
   const [topic, setTopic] = useState('')
   const [notes, setNotes] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const totalPrice = consultant.hourly_rate * (parseInt(duration) / 60)
+  const totalPrice = consultant.hourlyRate * (parseInt(duration) / 60)
 
   const handleNext = () => {
     if (step === 1 && (!date || !slot)) {
@@ -49,34 +51,31 @@ export function BookingForm({ consultant }: BookingFormProps) {
   const handleBack = () => setStep(step - 1)
 
   const handleConfirm = async () => {
+    if (!profile) {
+      toast.error('Silakan login terlebih dahulu')
+      return
+    }
+
     setIsSubmitting(true)
     try {
       const scheduledAt = new Date(date!)
       const [hours, minutes] = slot!.split(':').map(Number)
       scheduledAt.setHours(hours, minutes, 0, 0)
 
-      const response = await fetch('/api/bookings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          consultant_id: consultant.id,
-          scheduled_at: scheduledAt.toISOString(),
-          duration_minutes: parseInt(duration),
-          topic,
-          notes,
-          total_price: totalPrice,
-        }),
+      await createBooking({
+        userId: profile._id,
+        consultantId: consultant._id,
+        scheduledAt: scheduledAt.toISOString(),
+        durationMinutes: parseInt(duration),
+        topic,
+        notes: notes || undefined,
+        totalPrice: totalPrice,
       })
 
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message || 'Gagal membuat booking')
-      }
-
-      toast.success('Booking berhasil dikonfirmasi!')
-      router.push('/booking/success')
+      toast.success('Booking berhasil dikirim ke konsultan!')
+      router.push('/dashboard/user')
     } catch (error: any) {
-      toast.error(error.message)
+      toast.error(error.message || 'Terjadi kesalahan saat memproses booking')
     } finally {
       setIsSubmitting(false)
     }
@@ -85,65 +84,78 @@ export function BookingForm({ consultant }: BookingFormProps) {
   return (
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Progress Indicator */}
-      <div className="flex items-center justify-between px-4">
+      <div className="flex items-center justify-between px-4 mb-8">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="flex flex-col items-center space-y-2">
-            <div className={`flex h-8 w-8 items-center justify-center rounded-full text-xs font-bold ${
-              step >= i ? 'bg-blue-600 text-white' : 'bg-slate-200 text-slate-500'
+          <div key={i} className="flex flex-col items-center space-y-2 flex-1">
+            <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
+              step >= i ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-400'
             }`}>
-              {step > i ? <Check className="h-4 w-4" /> : i}
+              {step > i ? <Check className="h-5 w-5" /> : i}
             </div>
-            <span className={`text-[10px] uppercase font-bold tracking-wider ${
+            <span className={`text-[10px] uppercase font-black tracking-widest ${
               step >= i ? 'text-blue-600' : 'text-slate-400'
             }`}>
-              {i === 1 ? 'Jadwal' : i === 2 ? 'Detail' : 'Konfirmasi'}
+              {i === 1 ? 'Waktu' : i === 2 ? 'Detail' : 'Bayar'}
             </span>
           </div>
         ))}
       </div>
 
-      <Card>
+      <Card className="border-none shadow-xl shadow-slate-200/50 overflow-hidden">
         {step === 1 && (
           <>
-            <CardHeader>
+            <CardHeader className="bg-slate-50/50 border-b">
               <CardTitle className="text-xl flex items-center gap-2">
                 <CalendarDays className="h-5 w-5 text-blue-600" />
-                Pilih Jadwal Konsultasi
+                Atur Waktu Konsultasi
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-8 p-8">
               <div className="grid gap-8 md:grid-cols-2">
                 <div className="space-y-4">
-                  <Label>1. Pilih Tanggal</Label>
-                  <AvailabilityCalendar 
-                    consultantId={consultant.id} 
-                    selectedDate={date} 
-                    onDateSelect={setDate} 
+                  <Label className="text-slate-900 font-bold">1. Pilih Tanggal</Label>
+                  <Input 
+                    type="date" 
+                    min={new Date().toISOString().split('T')[0]}
+                    value={date.toISOString().split('T')[0]}
+                    onChange={(e) => setDate(new Date(e.target.value))}
+                    className="h-12 border-slate-200 focus:ring-blue-500"
                   />
+                  <p className="text-[11px] text-slate-500">Pilih hari kerja yang tersedia untuk konsultan ini.</p>
                 </div>
                 <div className="space-y-4">
-                  <Label>2. Pilih Jam</Label>
-                  {date ? (
-                    <TimeSlotPicker 
-                      consultantId={consultant.id} 
-                      selectedDate={date} 
-                      selectedSlot={slot} 
-                      onSlotSelect={setSlot} 
-                    />
-                  ) : (
-                    <div className="flex h-[300px] items-center justify-center rounded-lg border-2 border-dashed bg-slate-50">
-                      <p className="text-sm text-slate-500 text-center px-4">Silakan pilih tanggal di kalender terlebih dahulu</p>
-                    </div>
-                  )}
+                  <Label className="text-slate-900 font-bold">2. Pilih Jam Mulai</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00', '19:00', '20:00'].map((time) => (
+                      <Button
+                        key={time}
+                        variant={slot === time ? 'default' : 'outline'}
+                        className={`h-11 transition-all ${slot === time ? 'bg-blue-600 shadow-md' : 'border-slate-200 hover:border-blue-300'}`}
+                        onClick={() => setSlot(time)}
+                      >
+                        {time}
+                      </Button>
+                    ))}
+                  </div>
                 </div>
               </div>
-              <div className="space-y-4 pt-4 border-t">
-                <Label>3. Pilih Durasi Sesi</Label>
-                <ToggleGroup value={[duration]} onValueChange={(val: string[]) => val[0] && setDuration(val[0])} className="justify-start">
-                  <ToggleGroupItem value="30" className="px-6">30 Menit</ToggleGroupItem>
-                  <ToggleGroupItem value="60" className="px-6">60 Menit</ToggleGroupItem>
-                  <ToggleGroupItem value="90" className="px-6">90 Menit</ToggleGroupItem>
-                </ToggleGroup>
+              <div className="space-y-4 pt-6 border-t border-slate-100">
+                <Label className="text-slate-900 font-bold">3. Pilih Durasi Sesi</Label>
+                <div className="flex flex-wrap gap-3">
+                  {['30', '60', '90'].map((d) => (
+                    <button
+                      key={d}
+                      onClick={() => setDuration(d)}
+                      className={`px-8 py-3 rounded-xl border-2 font-bold text-sm transition-all ${
+                        duration === d 
+                        ? 'border-blue-600 bg-blue-50 text-blue-700 shadow-sm' 
+                        : 'border-slate-100 bg-white text-slate-500 hover:border-slate-200'
+                      }`}
+                    >
+                      {d} Menit
+                    </button>
+                  ))}
+                </div>
               </div>
             </CardContent>
           </>
@@ -151,40 +163,45 @@ export function BookingForm({ consultant }: BookingFormProps) {
 
         {step === 2 && (
           <>
-            <CardHeader>
+            <CardHeader className="bg-slate-50/50 border-b">
               <CardTitle className="text-xl flex items-center gap-2">
                 <MessageSquare className="h-5 w-5 text-blue-600" />
-                Detail Konsultasi
+                Informasi Masalah
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="bg-blue-50 p-4 rounded-lg flex items-start gap-3">
-                <Clock className="h-5 w-5 text-blue-600 mt-0.5" />
-                <div className="text-sm">
-                  <p className="font-semibold text-blue-900">Jadwal Terpilih:</p>
-                  <p className="text-blue-800">
-                    {format(date!, 'EEEE, dd MMMM yyyy', { locale: id })} | Pukul {slot} ({duration} menit)
+            <CardContent className="space-y-8 p-8">
+              <div className="bg-blue-600 rounded-2xl p-6 text-white shadow-lg shadow-blue-200 flex items-center gap-6">
+                <div className="h-14 w-14 bg-white/20 rounded-full flex items-center justify-center shrink-0">
+                  <Clock className="h-7 w-7" />
+                </div>
+                <div>
+                  <p className="text-blue-100 text-xs font-bold uppercase tracking-widest mb-1">Jadwal Sesi:</p>
+                  <p className="text-lg font-bold">
+                    {format(date!, 'EEEE, dd MMMM yyyy', { locale: localeId })}
                   </p>
+                  <p className="text-sm opacity-90">Pukul {slot} • {duration} Menit</p>
                 </div>
               </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="topic">Apa topik utama yang ingin Anda bahas? *</Label>
+              
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <Label htmlFor="topic" className="text-slate-900 font-bold">Apa topik utama yang ingin Anda bahas? *</Label>
                   <Input 
                     id="topic" 
                     placeholder="Contoh: Perencanaan Keuangan Keluarga" 
                     value={topic}
                     onChange={(e) => setTopic(e.target.value)}
+                    className="h-12 border-slate-200"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="notes">Catatan tambahan untuk konsultan (opsional)</Label>
+                <div className="space-y-3">
+                  <Label htmlFor="notes" className="text-slate-900 font-bold">Catatan tambahan untuk konsultan (opsional)</Label>
                   <Textarea 
                     id="notes" 
-                    placeholder="Ceritakan sedikit latar belakang masalah Anda..." 
+                    placeholder="Ceritakan sedikit latar belakang masalah Anda agar konsultan bisa bersiap lebih baik..." 
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    className="min-h-[120px]"
+                    className="min-h-[150px] border-slate-200 resize-none p-4"
                   />
                 </div>
               </div>
@@ -194,56 +211,72 @@ export function BookingForm({ consultant }: BookingFormProps) {
 
         {step === 3 && (
           <>
-            <CardHeader>
+            <CardHeader className="bg-slate-50/50 border-b">
               <CardTitle className="text-xl flex items-center gap-2">
                 <CreditCard className="h-5 w-5 text-blue-600" />
-                Konfirmasi Booking
+                Ringkasan Pembayaran
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="divide-y rounded-lg border bg-slate-50/50">
-                <div className="p-4 flex justify-between">
-                  <span className="text-slate-500">Konsultan</span>
-                  <span className="font-semibold">{consultant.full_name}</span>
+            <CardContent className="space-y-8 p-8">
+              <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+                <div className="bg-slate-50 p-4 border-b">
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Detail Pesanan</p>
                 </div>
-                <div className="p-4 flex justify-between">
-                  <span className="text-slate-500">Tanggal & Waktu</span>
-                  <span className="font-semibold">
-                    {format(date!, 'dd MMM yyyy')} | {slot}
-                  </span>
-                </div>
-                <div className="p-4 flex justify-between">
-                  <span className="text-slate-500">Durasi</span>
-                  <span className="font-semibold">{duration} Menit</span>
-                </div>
-                <div className="p-4 flex justify-between">
-                  <span className="text-slate-500 text-lg font-bold">Total Pembayaran</span>
-                  <span className="text-lg font-bold text-blue-600">
-                    {formatRupiah(totalPrice)}
-                  </span>
+                <div className="divide-y divide-slate-50">
+                  <div className="p-4 flex justify-between items-center">
+                    <span className="text-sm text-slate-500">Konsultan</span>
+                    <span className="text-sm font-bold text-slate-900">{consultant.fullName}</span>
+                  </div>
+                  <div className="p-4 flex justify-between items-center">
+                    <span className="text-sm text-slate-500">Waktu Sesi</span>
+                    <span className="text-sm font-bold text-slate-900">
+                      {format(date!, 'dd MMM yyyy')} • {slot} ({duration}m)
+                    </span>
+                  </div>
+                  <div className="p-6 flex justify-between items-center bg-blue-50/50">
+                    <span className="text-slate-900 font-black">TOTAL PEMBAYARAN</span>
+                    <div className="text-right">
+                      <span className="text-2xl font-black text-blue-600">
+                        {formatRupiah(totalPrice)}
+                      </span>
+                      <p className="text-[10px] text-slate-400 font-bold">PAJAK TERMASUK</p>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 flex gap-3">
-                <div className="h-5 w-5 rounded-full bg-amber-200 flex items-center justify-center text-[10px] font-bold mt-0.5">!</div>
-                <p className="text-sm text-amber-800">
-                  Pembayaran dilakukan secara langsung kepada konsultan saat sesi berlangsung melalui metode yang disepakati bersama.
-                </p>
+              <div className="rounded-2xl bg-amber-50 border border-amber-100 p-6 flex gap-4">
+                <div className="h-10 w-10 shrink-0 rounded-full bg-amber-200 flex items-center justify-center text-amber-800 font-black">!</div>
+                <div>
+                  <p className="text-sm font-bold text-amber-900 mb-1">Catatan Pembayaran</p>
+                  <p className="text-xs text-amber-800/80 leading-relaxed">
+                    Pembayaran diproses secara manual. Konsultan akan memberikan rincian metode pembayaran (Transfer/E-Wallet) setelah booking dikonfirmasi.
+                  </p>
+                </div>
               </div>
             </CardContent>
           </>
         )}
 
-        <CardFooter className="flex justify-between border-t pt-6 bg-slate-50/30">
-          <Button variant="ghost" onClick={handleBack} disabled={step === 1 || isSubmitting}>
+        <CardFooter className="flex justify-between items-center p-8 bg-slate-50/50 border-t">
+          <Button 
+            variant="ghost" 
+            onClick={handleBack} 
+            disabled={step === 1 || isSubmitting}
+            className="font-bold text-slate-500"
+          >
             <ArrowLeft className="mr-2 h-4 w-4" /> Kembali
           </Button>
           {step < 3 ? (
-            <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 px-8">
-              Lanjut <ArrowRight className="ml-2 h-4 w-4" />
+            <Button onClick={handleNext} className="bg-blue-600 hover:bg-blue-700 px-10 h-12 font-bold shadow-lg shadow-blue-200">
+              Selanjutnya <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
           ) : (
-            <Button onClick={handleConfirm} disabled={isSubmitting} className="bg-green-600 hover:bg-green-700 px-10">
-              {isSubmitting ? 'Memproses...' : 'Konfirmasi Booking'}
+            <Button 
+              onClick={handleConfirm} 
+              disabled={isSubmitting} 
+              className="bg-blue-600 hover:bg-blue-700 px-12 h-12 font-black shadow-lg shadow-blue-200"
+            >
+              {isSubmitting ? 'Memproses...' : 'KONFIRMASI BOOKING'}
             </Button>
           )}
         </CardFooter>

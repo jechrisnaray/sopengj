@@ -8,12 +8,12 @@ import Link from 'next/link'
 interface ConsultantCardProps {
   consultant: {
     id: string
-    full_name: string
+    fullName: string
     specializations: string[]
-    hourly_rate: number
+    hourlyRate: number
     rating: number
-    avatar_url?: string
-    is_available: boolean
+    avatarUrl?: string
+    isAvailable: boolean
   }
 }
 
@@ -26,12 +26,12 @@ export function ConsultantCard({ consultant }: ConsultantCardProps) {
         <div className="flex items-start justify-between">
           <div className="relative">
             <Avatar className="h-16 w-16 border-2 border-white shadow-sm">
-              <AvatarImage src={consultant.avatar_url} alt={consultant.full_name} />
+              <AvatarImage src={consultant.avatarUrl} alt={consultant.fullName} />
               <AvatarFallback className="bg-blue-50 text-blue-600">
-                {consultant.full_name.charAt(0)}
+                {consultant.fullName.charAt(0)}
               </AvatarFallback>
             </Avatar>
-            {consultant.is_available && (
+            {consultant.isAvailable && (
               <span className="absolute bottom-0 right-0 block h-4 w-4 rounded-full bg-green-500 border-2 border-white" title="Tersedia Sekarang" />
             )}
           </div>
@@ -43,7 +43,7 @@ export function ConsultantCard({ consultant }: ConsultantCardProps) {
 
         <div className="mt-4">
           <h3 className="text-lg font-bold text-slate-900 group-hover:text-blue-600">
-            {consultant.full_name}
+            {consultant.fullName}
           </h3>
           <div className="mt-2 flex flex-wrap gap-1">
             {consultant.specializations.map((spec) => (
@@ -58,13 +58,13 @@ export function ConsultantCard({ consultant }: ConsultantCardProps) {
           <div>
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Mulai dari</p>
             <p>
-                <span className="text-lg font-bold text-slate-900">{formatRupiah(consultant.hourly_rate)}</span>
+                <span className="text-lg font-bold text-slate-900">{formatRupiah(consultant.hourlyRate)}</span>
                 <span className="text-sm font-normal text-slate-400">/jam</span>
             </p>
           </div>
           <div className="flex items-center text-xs text-slate-500">
             <Clock className="mr-1 h-3 w-3" />
-            {consultant.is_available ? 'Siap Konsultasi' : 'Sibuk'}
+            {consultant.isAvailable ? 'Siap Konsultasi' : 'Sibuk'}
           </div>
         </div>
       </CardContent>

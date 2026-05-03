@@ -1,37 +1,115 @@
-import { getAIRecommendations } from './groq'
-import { ConsultantData, scoreConsultants } from './scoring'
-import { Consultant, Profile } from '@/types'
+import { getGroqRecommendations } from './groq'
+import { scoreConsultants } from './scoring'
+import { MOCK_CONSULTANTS } from '../data/mock-consultants'
+import type {
+  ConsultantForAI,
+  RecommendationResult,
+  RecommendationRequest,
+} from '@/types'
+import { ConvexHttpClient } from "convex/browser";
+import { api } from "../../../convex/_generated/api";
 
-interface UserNeeds {
-  topic: string
-  budget?: number
-  preferredTime?: 'pagi' | 'siang' | 'sore' | 'malam'
+const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
+
+// In-memory cache: key = hash input, value = { result, expiry }
+const cache = new Map<string, { result: RecommendationResult; expiry: number }>()
+const CACHE_TTL = 60 * 60 * 1000 // 1 jam
+
+function hashKey(req: RecommendationRequest): string {
+  return `${req.problem.slice(0, 100)}_${req.budget ?? 0}`
 }
 
-export async function getRecommendations(needs: UserNeeds, consultants: Consultant[]) {
+// Ambil konsultan dari Convex
+async function fetchConsultantsForAI(): Promise<ConsultantForAI[]> {
   try {
-    // 1. Coba gunakan AI (Groq)
-    console.log('Fetching AI recommendation from Groq...')
-    const data = consultants.map(c => ({
-      ...c,
-      full_name: (c as any).profiles?.full_name || 'Konsultan',
-      avatar_url: (c as any).profiles?.avatar_url || ''
-    })) as ConsultantData[]
+    const data = await convex.query(api.consultants.list, {});
 
-    const aiResult = await getAIRecommendations(needs, data)
-    
-    if (aiResult.recommendations && aiResult.recommendations.length > 0) {
-      return aiResult.recommendations
+    if (!data || data.length === 0) {
+      throw new Error('No consultants found');
     }
-    
-    throw new Error('AI returned empty result')
-  } catch (error) {
-    // 2. Fallback ke scoring manual jika AI gagal
-    console.warn('AI Recommendation failed, falling back to manual scoring:', error)
-    return scoreConsultants(needs, consultants.map(c => ({
-      ...c,
-      full_name: (c as any).profiles?.full_name || 'Konsultan',
-      avatar_url: (c as any).profiles?.avatar_url || ''
-    })) as ConsultantData[])
+
+    return data.map(c => ({
+      id: c._id,
+      fullName: c.fullName,
+      specializations: c.specializations,
+      experienceYears: c.experienceYears,
+      rating: c.rating,
+      totalReviews: c.totalReviews,
+      hourlyRate: c.hourlyRate,
+      isAvailable: c.isAvailable,
+      languages: c.languages ?? ['Indonesia'],
+    }))
+  } catch (err) {
+    console.warn('[AI] Using mock data for recommendation engine', err)
+    return MOCK_CONSULTANTS.map(c => ({
+      id: c.id,
+      fullName: c.full_name,
+      specializations: c.specializations,
+      experienceYears: c.experience_years,
+      rating: c.rating,
+      totalReviews: c.total_reviews,
+      hourlyRate: c.hourly_rate,
+      isAvailable: c.is_available,
+      languages: ['Indonesia']
+    }))
   }
+}
+
+// Main function: orkestrasi Groq + fallback
+export async function getRecommendations(
+  req: RecommendationRequest
+): Promise<RecommendationResult> {
+  const key = hashKey(req)
+
+  // Cek cache
+  const cached = cache.get(key)
+  if (cached && cached.expiry > Date.now()) {
+    return { ...cached.result, cached: true }
+  }
+
+  // Ambil data konsultan
+  const consultants = await fetchConsultantsForAI()
+
+  if (consultants.length === 0) {
+    return {
+      recommendations: [],
+      source: 'manual',
+      cached: false,
+    }
+  }
+
+  let result: RecommendationResult
+
+  // Coba Groq dulu
+  try {
+    const recommendations = await getGroqRecommendations(
+      req.problem,
+      consultants,
+      req.budget
+    )
+    result = { recommendations, source: 'groq', cached: false }
+  } catch (groqError) {
+    console.warn('[AI] Groq gagal, fallback ke manual scoring:', groqError)
+
+    // Fallback ke manual scoring
+    const recommendations = scoreConsultants(
+      consultants,
+      req.problem,
+      req.budget
+    )
+    result = { recommendations, source: 'manual', cached: false }
+  }
+
+  // Simpan ke cache
+  cache.set(key, { result, expiry: Date.now() + CACHE_TTL })
+
+  // Cleanup cache entries yang expired (jaga memory)
+  if (cache.size > 100) {
+    const now = Date.now()
+    for (const [k, v] of cache.entries()) {
+      if (v.expiry < now) cache.delete(k)
+    }
+  }
+
+  return result
 }

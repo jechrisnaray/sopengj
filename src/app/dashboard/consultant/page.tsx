@@ -1,7 +1,7 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
+import { useQuery, useMutation } from "convex/react";
+import { api } from "../../../../convex/_generated/api";
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,158 +9,247 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { formatRupiah } from '@/lib/utils/format'
-import { Users, Star, Banknote, CalendarCheck, Check, X, Clock } from 'lucide-react'
-
-import { useBookingsRealtime } from '@/hooks/useBookingsRealtime'
+import { Users, Star, Banknote, CalendarCheck, Check, X, Clock, TrendingUp } from 'lucide-react'
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function ConsultantDashboard() {
-  useBookingsRealtime()
-  const [bookings, setBookings] = useState<any[]>([])
-  const [stats, setStats] = useState({ totalSessions: 0, rating: 0, income: 0 })
-  const [isLoading, setIsLoading] = useState(true)
-  const supabase = createClient()
+  const { profile, isLoading: isAuthLoading } = useCurrentUser();
+  
+  // Get consultant record for this profile
+  const consultant = useQuery(api.consultants.getByProfileId, profile ? { profileId: profile._id } : "skip");
+  
+  // Get bookings for this consultant
+  const bookings = useQuery(api.bookings.listForConsultant, consultant ? { consultantId: consultant._id } : "skip");
+  
+  // Get stats
+  const stats = useQuery(api.stats.getConsultantStats, consultant ? { consultantId: consultant._id } : "skip");
 
-  useEffect(() => {
-    fetchConsultantData()
-  }, [])
+  const updateStatus = useMutation(api.bookings.updateStatus);
 
-  const fetchConsultantData = async () => {
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
+  const isLoading = isAuthLoading || consultant === undefined || bookings === undefined || stats === undefined;
 
-    // Get Consultant ID
-    const { data: consultant } = await supabase
-      .from('consultants')
-      .select('id, rating, hourly_rate')
-      .eq('profile_id', user.id)
-      .single()
-    
-    if (!consultant) return
-
-    // Get Bookings
-    const { data: bookingData } = await supabase
-      .from('bookings')
-      .select(`
-        *,
-        user_profile:user_id (full_name, avatar_url)
-      `)
-      .eq('consultant_id', consultant.id)
-      .order('scheduled_at', { ascending: true })
-
-    setBookings(bookingData || [])
-    
-    // Calculate simple stats
-    const completed = bookingData?.filter(b => b.status === 'completed') || []
-    setStats({
-      totalSessions: completed.length,
-      rating: consultant.rating || 0,
-      income: completed.reduce((acc, curr) => acc + curr.total_price, 0)
-    })
-    
-    setIsLoading(false)
-  }
-
-  const updateBookingStatus = async (id: string, status: string) => {
-    const { error } = await supabase
-      .from('bookings')
-      .update({ status })
-      .eq('id', id)
-
-    if (error) {
-      toast.error('Gagal memperbarui status')
-    } else {
-      toast.success(`Booking berhasil ${status === 'confirmed' ? 'diterima' : 'ditolak'}`)
-      fetchConsultantData()
+  const handleUpdateStatus = async (id: any, status: 'confirmed' | 'cancelled') => {
+    try {
+      await updateStatus({ id, status });
+      toast.success(`Booking berhasil ${status === 'confirmed' ? 'diterima' : 'ditolak'}`);
+    } catch (err) {
+      toast.error('Gagal memperbarui status');
     }
   }
 
-  const pendingBookings = bookings.filter(b => b.status === 'pending')
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center animate-pulse">
+        <div className="h-10 w-64 bg-slate-200 mx-auto mb-8 rounded" />
+        <div className="grid gap-4 md:grid-cols-4 mb-8">
+          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-slate-100 rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
+
+  if (!consultant) {
+    return (
+      <div className="container mx-auto px-4 py-20 text-center">
+        <h2 className="text-2xl font-bold mb-4">Profil Konsultan Tidak Ditemukan</h2>
+        <p className="text-slate-500 mb-8">Anda harus terdaftar sebagai konsultan untuk mengakses halaman ini.</p>
+        <Button asChild><a href="/consultants/register">Daftar Jadi Konsultan</a></Button>
+      </div>
+    );
+  }
+
+  const pendingBookings = bookings?.filter(b => b.status === 'pending') || [];
+  const upcomingBookings = bookings?.filter(b => b.status === 'confirmed') || [];
 
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <h1 className="text-3xl font-bold">Dashboard Konsultan</h1>
-
-      {/* Stats Grid */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard title="Total Sesi" value={stats.totalSessions} icon={<Users className="h-5 w-5 text-blue-600" />} />
-        <StatCard title="Rating" value={`${stats.rating}/5`} icon={<Star className="h-5 w-5 text-amber-500 fill-current" />} />
-        <StatCard title="Pendapatan" value={formatRupiah(stats.income)} icon={<Banknote className="h-5 w-5 text-green-600" />} />
-        <StatCard title="Antrean" value={pendingBookings.length} icon={<Clock className="h-5 w-5 text-orange-500" />} />
+    <div className="container mx-auto px-4 py-8 space-y-8 bg-slate-50/30 min-h-screen">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Dashboard Konsultan</h1>
+          <p className="text-slate-500 mt-1">Selamat datang kembali, {profile?.fullName}</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" className="bg-white">Edit Profil</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700" asChild>
+            <Link href="/dashboard/consultant/schedule">Atur Jadwal</Link>
+          </Button>
+        </div>
       </div>
 
-      <div className="grid gap-8 md:grid-cols-2">
+      {/* Stats Grid */}
+      <div className="grid gap-6 md:grid-cols-4">
+        <StatCard 
+          title="Total Sesi" 
+          value={stats?.totalSessions ?? 0} 
+          icon={<Users className="h-6 w-6 text-blue-600" />}
+          description="Selesai"
+        />
+        <StatCard 
+          title="Rating Ahli" 
+          value={(stats?.rating ?? 0).toFixed(1)} 
+          icon={<Star className="h-6 w-6 text-amber-500 fill-amber-500" />}
+          description={`${consultant.totalReviews} ulasan`}
+        />
+        <StatCard 
+          title="Pendapatan" 
+          value={formatRupiah(stats?.totalIncome ?? 0)} 
+          icon={<Banknote className="h-6 w-6 text-green-600" />}
+          description="Total saldo"
+        />
+        <StatCard 
+          title="Permintaan" 
+          value={stats?.pendingCount ?? 0} 
+          icon={<Clock className="h-6 w-6 text-orange-500" />}
+          description="Butuh konfirmasi"
+        />
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-3">
         {/* Pending Requests */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <CalendarCheck className="h-5 w-5 text-blue-600" /> Booking Masuk
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {pendingBookings.map((b) => (
-              <div key={b.id} className="flex items-center justify-between p-4 border rounded-lg bg-slate-50/50">
-                <div className="flex items-center gap-3">
-                  <Avatar>
-                    <AvatarImage src={b.user_profile.avatar_url} />
-                    <AvatarFallback>U</AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="text-sm font-bold">{b.user_profile.full_name}</p>
-                    <p className="text-[11px] text-slate-500">{format(new Date(b.scheduled_at), 'dd MMM, HH:mm')}</p>
+        <div className="lg:col-span-2 space-y-6">
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader className="bg-white border-b border-slate-100">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <CalendarCheck className="h-5 w-5 text-blue-600" /> Booking Masuk
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="divide-y divide-slate-100">
+                {pendingBookings.map((b) => (
+                  <div key={b._id} className="flex flex-col sm:flex-row items-center justify-between p-6 hover:bg-slate-50 transition-colors">
+                    <div className="flex items-center gap-4 w-full">
+                      <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
+                        <AvatarImage src={b.userAvatar} />
+                        <AvatarFallback>U</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-slate-900">{b.userName}</p>
+                          <Badge variant="secondary" className="bg-blue-50 text-blue-700 text-[10px]">NEW</Badge>
+                        </div>
+                        <p className="text-xs text-slate-500 font-medium">
+                          {format(new Date(b.scheduledAt), 'EEEE, dd MMM • HH:mm')}
+                        </p>
+                        <p className="text-sm text-slate-700 mt-2 line-clamp-1 italic font-medium">"{b.topic}"</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4 sm:mt-0 w-full sm:w-auto">
+                      <Button 
+                        size="sm" 
+                        className="flex-1 bg-green-600 hover:bg-green-700 h-9" 
+                        onClick={() => handleUpdateStatus(b._id, 'confirmed')}
+                      >
+                        <Check className="h-4 w-4 mr-2" /> Terima
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="flex-1 text-red-600 border-red-200 hover:bg-red-50 hover:text-red-700 h-9" 
+                        onClick={() => handleUpdateStatus(b._id, 'cancelled')}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button size="icon" variant="outline" className="h-8 w-8 text-green-600 hover:bg-green-50" onClick={() => updateBookingStatus(b.id, 'confirmed')}>
-                    <Check className="h-4 w-4" />
-                  </Button>
-                  <Button size="icon" variant="outline" className="h-8 w-8 text-red-600 hover:bg-red-50" onClick={() => updateBookingStatus(b.id, 'cancelled')}>
-                    <X className="h-4 w-4" />
-                  </Button>
+                ))}
+                {pendingBookings.length === 0 && (
+                  <div className="text-center py-16">
+                    <div className="h-16 w-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <CalendarCheck className="h-8 w-8 text-slate-300" />
+                    </div>
+                    <p className="text-sm text-slate-400">Tidak ada permintaan booking baru.</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Schedule Preview */}
+          <Card className="border-none shadow-sm overflow-hidden">
+            <CardHeader className="bg-white border-b border-slate-100">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Clock className="h-5 w-5 text-blue-600" /> Jadwal Sesi Mendatang
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="grid gap-4">
+                {upcomingBookings.slice(0, 5).map((b) => (
+                  <div key={b._id} className="flex items-center gap-4 p-4 border-l-4 border-blue-600 bg-white shadow-sm rounded-r-lg group hover:bg-slate-50 transition-colors">
+                    <div className="text-center min-w-[60px] border-r pr-4">
+                      <p className="text-[10px] font-bold uppercase text-blue-600">{format(new Date(b.scheduledAt), 'MMM')}</p>
+                      <p className="text-2xl font-black leading-none text-slate-900">{format(new Date(b.scheduledAt), 'dd')}</p>
+                    </div>
+                    <div className="flex-grow">
+                      <p className="text-sm font-bold text-slate-900 group-hover:text-blue-600 transition-colors">{b.topic}</p>
+                      <p className="text-xs text-slate-500 font-medium">Klien: {b.userName} • {format(new Date(b.scheduledAt), 'HH:mm')}</p>
+                    </div>
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge variant="outline" className="bg-green-50 text-green-700 border-green-100">Confirmed</Badge>
+                      <button className="text-[10px] text-blue-600 font-bold hover:underline">Link Meeting</button>
+                    </div>
+                  </div>
+                ))}
+                {upcomingBookings.length === 0 && (
+                  <p className="text-center py-10 text-sm text-slate-400 italic">Belum ada sesi yang terkonfirmasi.</p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Sidebar Info */}
+        <div className="lg:col-span-1 space-y-6">
+          <Card className="border-none shadow-sm">
+            <CardHeader>
+              <CardTitle className="text-sm font-bold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-green-600" /> Analitik Cepat
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Populeritas</p>
+                <div className="flex items-end justify-between">
+                  <p className="text-xl font-bold">Top 5%</p>
+                  <span className="text-[10px] text-green-600 font-bold">+12% Bulan ini</span>
                 </div>
               </div>
-            ))}
-            {pendingBookings.length === 0 && <p className="text-center py-6 text-sm text-slate-400">Tidak ada permintaan baru.</p>}
-          </CardContent>
-        </Card>
-
-        {/* Schedule Preview */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Jadwal Sesi Mendatang</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {bookings.filter(b => b.status === 'confirmed').slice(0, 5).map((b) => (
-                <div key={b.id} className="flex items-center gap-4 p-3 border-l-4 border-blue-600 bg-white shadow-sm rounded-r-lg">
-                  <div className="text-center min-w-[50px]">
-                    <p className="text-xs font-bold uppercase">{format(new Date(b.scheduled_at), 'MMM')}</p>
-                    <p className="text-xl font-bold leading-none">{format(new Date(b.scheduled_at), 'dd')}</p>
-                  </div>
-                  <div className="flex-grow">
-                    <p className="text-sm font-bold">{b.topic}</p>
-                    <p className="text-xs text-slate-500">Klien: {b.user_profile.full_name} • {format(new Date(b.scheduled_at), 'HH:mm')}</p>
-                  </div>
-                  <Badge variant="secondary">Siap</Badge>
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
+                <p className="text-[10px] uppercase font-bold text-slate-400 mb-1">Waktu Respon</p>
+                <div className="flex items-end justify-between">
+                  <p className="text-xl font-bold">~15 Menit</p>
+                  <span className="text-[10px] text-blue-600 font-bold">Sangat Cepat</span>
                 </div>
-              ))}
-              {bookings.filter(b => b.status === 'confirmed').length === 0 && <p className="text-center py-6 text-sm text-slate-400">Jadwal masih kosong.</p>}
-            </div>
-          </CardContent>
-        </Card>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-blue-600 text-white border-none shadow-lg">
+            <CardContent className="p-6">
+              <h3 className="font-bold text-lg mb-2">Butuh Bantuan?</h3>
+              <p className="text-blue-100 text-xs mb-4 leading-relaxed">
+                Ada kendala dengan sistem atau pembayaran? Tim support kami siap membantu Anda 24/7.
+              </p>
+              <Button size="sm" className="w-full bg-white text-blue-600 hover:bg-blue-50 font-bold border-none">
+                Hubungi Support
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
 }
 
-function StatCard({ title, value, icon }: { title: string, value: any, icon: React.ReactNode }) {
+function StatCard({ title, value, icon, description }: { title: string, value: any, icon: React.ReactNode, description: string }) {
   return (
-    <Card>
+    <Card className="border-none shadow-sm hover:shadow-md transition-shadow">
       <CardContent className="p-6 flex items-center justify-between">
         <div>
-          <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{title}</p>
-          <p className="text-2xl font-bold">{value}</p>
+          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{title}</p>
+          <p className="text-2xl font-black text-slate-900">{value}</p>
+          <p className="text-[10px] text-slate-500 font-medium mt-1">{description}</p>
         </div>
-        <div className="p-3 bg-slate-50 rounded-lg">{icon}</div>
+        <div className="h-12 w-12 bg-slate-50 rounded-2xl flex items-center justify-center shadow-inner">{icon}</div>
       </CardContent>
     </Card>
   )

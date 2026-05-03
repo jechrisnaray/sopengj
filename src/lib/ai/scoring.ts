@@ -1,115 +1,129 @@
-export interface UserNeeds {
-  topic: string
-  budget?: number
-  preferredTime?: 'pagi' | 'siang' | 'sore' | 'malam'
-  language?: string
+import type { ConsultantForAI, AIRecommendation } from '@/types'
+
+// Keyword mapping per kategori masalah
+const CATEGORY_KEYWORDS: Record<string, string[]> = {
+  hukum: ['hukum', 'hukm', 'legal', 'kontrak', 'perjanjian', 'gugatan', 'pidana', 'perdata', 'advokat', 'pengacara', 'sengketa', 'warisan', 'perceraian', 'perusahaan'],
+  keuangan: ['keuangan', 'investasi', 'saham', 'reksa dana', 'pajak', 'utang', 'pinjaman', 'asuransi', 'perencanaan keuangan', 'tabungan', 'pensiun', 'kripto', 'modal'],
+  psikologi: ['psikologi', 'stress', 'stres', 'anxiety', 'cemas', 'depresi', 'mental', 'trauma', 'hubungan', 'keluarga', 'motivasi', 'karir', 'burnout', 'self', 'emosi'],
+  bisnis: ['bisnis', 'usaha', 'startup', 'pemasaran', 'marketing', 'manajemen', 'operasional', 'strategi', 'brand', 'produk', 'pelanggan', 'revenue', 'profit', 'ukm'],
+  teknologi: ['teknologi', 'software', 'aplikasi', 'website', 'programming', 'it', 'digital', 'data', 'keamanan', 'cyber', 'cloud', 'ai', 'sistem'],
+  kesehatan: ['kesehatan', 'medis', 'dokter', 'gizi', 'nutrisi', 'diet', 'olahraga', 'penyakit', 'obat', 'terapi', 'fisik'],
+  pendidikan: ['pendidikan', 'belajar', 'kuliah', 'sekolah', 'karir', 'beasiswa', 'cv', 'interview', 'kerja', 'skill'],
 }
 
-export interface ConsultantData {
-  id: string
-  full_name: string
-  specializations: string[]
-  hourly_rate: number
-  rating: number
-  is_available: boolean
-  avatar_url?: string
-  availability?: Array<{
-    day_of_week: number
-    start_time: string
-    end_time: string
-  }>
-}
+// Ekstrak keyword dari teks masalah user
+function extractKeywords(problem: string): string[] {
+  const lower = problem.toLowerCase()
+  const found: string[] = []
 
-export interface ConsultantScore {
-  consultant_id: string
-  score: number
-  reasons: string[]
-  best_slots: string[]
-  personalized_message?: string
-}
-
-export function scoreConsultants(
-  needs: UserNeeds,
-  consultants: ConsultantData[]
-): ConsultantScore[] {
-  return consultants.map((c) => {
-    let score = 0
-    const reasons: string[] = []
-    const topicLower = needs.topic.toLowerCase()
-
-    // 1. Kecocokan Spesialisasi (40 poin)
-    const matches = c.specializations.filter((spec) =>
-      topicLower.includes(spec.toLowerCase())
-    )
-    
-    if (matches.length > 0) {
-      const isFullMatch = c.specializations.some(s => s.toLowerCase() === topicLower)
-      const points = isFullMatch ? 40 : 20
-      score += points
-      reasons.push(isFullMatch ? 'Keahlian sangat sesuai dengan topik Anda' : 'Memiliki spesialisasi yang relevan')
-    }
-
-    // 2. Rating Konsultan (30 poin)
-    const ratingPoints = Math.round(c.rating * 6)
-    score += ratingPoints
-    if (c.rating >= 4.5) reasons.push('Konsultan dengan rating sangat tinggi')
-
-    // 3. Kesesuaian Budget (20 poin)
-    if (needs.budget) {
-      if (c.hourly_rate <= needs.budget) {
-        score += 20
-        reasons.push('Sesuai dengan budget Anda')
-      } else if (c.hourly_rate <= needs.budget * 1.2) {
-        score += 10
-        reasons.push('Sedikit di atas budget, namun kualitas sebanding')
+  for (const [category, keywords] of Object.entries(CATEGORY_KEYWORDS)) {
+    for (const kw of keywords) {
+      if (lower.includes(kw)) {
+        found.push(kw)
+        if (!found.includes(category)) found.push(category)
       }
-    } else {
-      score += 10 // Default
     }
-
-    // 4. Ketersediaan (10 poin)
-    if (c.is_available) {
-      score += 10
-      reasons.push('Tersedia untuk sesi segera')
-    }
-
-    // Saran Waktu Terbaik
-    const best_slots = getBestSlots(c.availability || [], needs.preferredTime)
-
-    return {
-      consultant_id: c.id,
-      score: Math.min(score, 100),
-      reasons,
-      best_slots,
-      personalized_message: `Berdasarkan algoritma kami, ${c.full_name} adalah pilihan yang solid untuk membantu Anda.`
-    }
-  }).sort((a, b) => b.score - a.score)
-}
-
-function getBestSlots(availability: any[], preferredTime?: string): string[] {
-  if (availability.length === 0) return ['Jadwal fleksibel']
-  
-  const timeRanges: Record<string, { start: string, end: string }> = {
-    pagi: { start: '06:00', end: '11:59' },
-    siang: { start: '12:00', end: '14:59' },
-    sore: { start: '15:00', end: '17:59' },
-    malam: { start: '18:00', end: '21:59' },
   }
 
-  const range = preferredTime ? timeRanges[preferredTime] : null
-  
-  const slots = availability
-    .filter(slot => {
-      if (!range) return true
-      return slot.start_time >= range.start && slot.start_time <= range.end
-    })
-    .map(slot => `${getDayName(slot.day_of_week)}, ${slot.start_time.slice(0, 5)}`)
-    .slice(0, 3)
-
-  return slots.length > 0 ? slots : ['Cek ketersediaan di profil']
+  return [...new Set(found)]
 }
 
-function getDayName(day: number): string {
-  const days = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu']
-  return days[day]
+// Hitung score 0-100 untuk satu konsultan
+function scoreOne(
+  consultant: ConsultantForAI,
+  keywords: string[],
+  budget?: number
+): number {
+  let score = 0
+
+  // 1. Keyword match dalam spesialisasi (max 40 poin)
+  const specializationText = consultant.specializations
+    .join(' ')
+    .toLowerCase()
+  const matchCount = keywords.filter(kw =>
+    specializationText.includes(kw)
+  ).length
+  score += Math.min(matchCount * 10, 40)
+
+  // 2. Rating (max 25 poin)
+  score += (consultant.rating / 5) * 25
+
+  // 3. Pengalaman (max 15 poin)
+  score += Math.min(consultant.experienceYears * 1.5, 15)
+
+  // 4. Ketersediaan (10 poin)
+  if (consultant.isAvailable) score += 10
+
+  // 5. Jumlah review sebagai social proof (max 10 poin)
+  score += Math.min(consultant.totalReviews * 0.5, 10)
+
+  // 6. Filter budget — kurangi score jika melebihi budget
+  if (budget && consultant.hourlyRate > budget) {
+    score -= 20
+  }
+
+  return Math.max(0, Math.min(100, score))
+}
+
+// Buat alasan dalam Bahasa Indonesia
+function buildReason(
+  consultant: ConsultantForAI,
+  keywords: string[],
+  score: number
+): string {
+  const matched = keywords.filter(kw =>
+    consultant.specializations.join(' ').toLowerCase().includes(kw)
+  )
+
+  const parts: string[] = []
+
+  if (matched.length > 0) {
+    parts.push(`Spesialisasi di bidang ${matched.slice(0, 2).join(' dan ')}`)
+  }
+
+  if (consultant.experienceYears >= 5) {
+    parts.push(`berpengalaman ${consultant.experienceYears} tahun`)
+  }
+
+  if (consultant.rating >= 4.5) {
+    parts.push(`rating tinggi ${consultant.rating.toFixed(1)}/5`)
+  } else if (consultant.rating >= 4.0) {
+    parts.push(`rating ${consultant.rating.toFixed(1)}/5`)
+  }
+
+  if (consultant.totalReviews >= 20) {
+    parts.push(`${consultant.totalReviews} ulasan positif`)
+  }
+
+  if (parts.length === 0) {
+    return 'Konsultan yang tersedia dan sesuai dengan kebutuhan Anda.'
+  }
+
+  return parts.join(', ') + '.'
+}
+
+// Main function: scoring manual untuk semua konsultan
+export function scoreConsultants(
+  consultants: ConsultantForAI[],
+  problem: string,
+  budget?: number
+): AIRecommendation[] {
+  const keywords = extractKeywords(problem)
+
+  const scored = consultants.map(c => {
+    const score = scoreOne(c, keywords, budget)
+    return {
+      consultantId: c.id,
+      score,
+      reason: buildReason(c, keywords, score),
+      matchedKeywords: keywords.filter(kw =>
+        c.specializations.join(' ').toLowerCase().includes(kw)
+      ),
+    }
+  })
+
+  // Sort descending, ambil top 3
+  return scored
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 3)
 }
