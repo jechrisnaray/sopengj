@@ -28,7 +28,7 @@ async function fetchConsultantsForAI(): Promise<ConsultantForAI[]> {
       throw new Error('No consultants found');
     }
 
-    return data.map(c => ({
+    return data.map((c: any) => ({
       id: c._id,
       fullName: c.fullName,
       specializations: c.specializations,
