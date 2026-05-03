@@ -10,6 +10,7 @@ import { format } from 'date-fns'
 import { toast } from 'sonner'
 import { formatRupiah } from '@/lib/utils/format'
 import { Users, Star, Banknote, CalendarCheck, Check, X, Clock, TrendingUp } from 'lucide-react'
+import Link from 'next/link'
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function ConsultantDashboard() {
@@ -58,8 +59,8 @@ export default function ConsultantDashboard() {
     );
   }
 
-  const pendingBookings = bookings?.filter(b => b.status === 'pending') || [];
-  const upcomingBookings = bookings?.filter(b => b.status === 'confirmed') || [];
+  const pendingBookings = (bookings as any[])?.filter((b: any) => b.status === 'pending') || [];
+  const upcomingBookings = (bookings as any[])?.filter((b: any) => b.status === 'confirmed') || [];
 
   return (
     <div className="container mx-auto px-4 py-8 space-y-8 bg-slate-50/30 min-h-screen">
@@ -115,7 +116,7 @@ export default function ConsultantDashboard() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="divide-y divide-slate-100">
-                {pendingBookings.map((b) => (
+                {pendingBookings.map((b: any) => (
                   <div key={b._id} className="flex flex-col sm:flex-row items-center justify-between p-6 hover:bg-slate-50 transition-colors">
                     <div className="flex items-center gap-4 w-full">
                       <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
@@ -173,7 +174,7 @@ export default function ConsultantDashboard() {
             </CardHeader>
             <CardContent className="p-6">
               <div className="grid gap-4">
-                {upcomingBookings.slice(0, 5).map((b) => (
+                {upcomingBookings.slice(0, 5).map((b: any) => (
                   <div key={b._id} className="flex items-center gap-4 p-4 border-l-4 border-blue-600 bg-white shadow-sm rounded-r-lg group hover:bg-slate-50 transition-colors">
                     <div className="text-center min-w-[60px] border-r pr-4">
                       <p className="text-[10px] font-bold uppercase text-blue-600">{format(new Date(b.scheduledAt), 'MMM')}</p>

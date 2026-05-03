@@ -11,7 +11,7 @@ export const create = mutation({
     notes: v.optional(v.string()),
     totalPrice: v.number(),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const bookingId = await ctx.db.insert("bookings", {
       ...args,
       status: "pending",
@@ -43,7 +43,7 @@ export const updateStatus = mutation({
     status: v.union(v.literal("confirmed"), v.literal("completed"), v.literal("cancelled")),
     meetingLink: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const { id, ...updates } = args;
     const booking = await ctx.db.get(id);
     if (!booking) throw new Error("Booking tidak ditemukan");
@@ -65,15 +65,15 @@ export const updateStatus = mutation({
 
 export const listForUser = query({
   args: { userId: v.id("profiles") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const bookings = await ctx.db
       .query("bookings")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .withIndex("by_user", (q: any) => q.eq("userId", args.userId))
       .order("desc")
       .collect();
 
     return await Promise.all(
-      bookings.map(async (b) => {
+      bookings.map(async (b: any) => {
         const consultant = await ctx.db.get(b.consultantId);
         const consultantProfile = consultant ? await ctx.db.get(consultant.profileId) : null;
         return {
@@ -88,15 +88,15 @@ export const listForUser = query({
 
 export const listForConsultant = query({
   args: { consultantId: v.id("consultants") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const bookings = await ctx.db
       .query("bookings")
-      .withIndex("by_consultant", (q) => q.eq("consultantId", args.consultantId))
+      .withIndex("by_consultant", (q: any) => q.eq("consultantId", args.consultantId))
       .order("desc")
       .collect();
 
     return await Promise.all(
-      bookings.map(async (b) => {
+      bookings.map(async (b: any) => {
         const userProfile = await ctx.db.get(b.userId);
         return {
           ...b,

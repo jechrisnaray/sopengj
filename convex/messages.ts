@@ -6,12 +6,11 @@ export const send = mutation({
     bookingId: v.id("bookings"),
     senderId: v.id("profiles"),
     content: v.string(),
-    type: v.union(v.literal("text"), v.literal("file"), v.literal("system")),
-    fileUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     return await ctx.db.insert("messages", {
       ...args,
+      isRead: false,
       createdAt: Date.now(),
     });
   },
@@ -19,10 +18,10 @@ export const send = mutation({
 
 export const listByBooking = query({
   args: { bookingId: v.id("bookings") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     return await ctx.db
       .query("messages")
-      .withIndex("by_booking", (q) => q.eq("bookingId", args.bookingId))
+      .withIndex("by_booking", (q: any) => q.eq("bookingId", args.bookingId))
       .order("asc")
       .collect();
   },

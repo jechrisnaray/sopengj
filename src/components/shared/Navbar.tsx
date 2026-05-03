@@ -18,7 +18,7 @@ export default function Navbar() {
 
   // Real-time notification count from Convex
   const notifications = useQuery(api.notifications.list, profile ? { userId: profile._id } : "skip")
-  const unreadCount = notifications?.filter(n => !n.isRead).length ?? 0
+  const unreadCount = (notifications as any[])?.filter((n: any) => !n.isRead).length ?? 0
 
   const handleLogout = async () => {
     const supabase = createClient()

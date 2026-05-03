@@ -45,8 +45,8 @@ export default function UserDashboard() {
     );
   }
 
-  const upcomingBookings = bookings?.filter(b => b.status === 'pending' || b.status === 'confirmed') || []
-  const historyBookings = bookings?.filter(b => b.status === 'completed' || b.status === 'cancelled') || []
+  const upcomingBookings = (bookings as any[])?.filter((b: any) => b.status === 'pending' || b.status === 'confirmed') || []
+  const historyBookings = (bookings as any[])?.filter((b: any) => b.status === 'completed' || b.status === 'cancelled') || []
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -92,7 +92,7 @@ export default function UserDashboard() {
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              {notifications?.slice(0, 5).map((n) => (
+              {notifications?.slice(0, 5).map((n: any) => (
                 <div key={n._id} className={`p-4 text-xs border-b transition-colors hover:bg-slate-50 ${!n.isRead ? 'bg-blue-50/50 border-l-2 border-l-blue-500' : ''}`}>
                   <p className="font-bold mb-1">{n.title}</p>
                   <p className="text-slate-600 mb-2">{n.message}</p>
@@ -115,7 +115,7 @@ export default function UserDashboard() {
             </TabsList>
 
             <TabsContent value="upcoming" className="space-y-4">
-              {upcomingBookings.map((booking) => (
+              {upcomingBookings.map((booking: any) => (
                 <Card key={booking._id} className="overflow-hidden hover:shadow-md transition-shadow">
                   <div className="flex flex-col md:flex-row">
                     <div className="p-6 flex-grow">
@@ -191,7 +191,7 @@ export default function UserDashboard() {
             </TabsContent>
 
             <TabsContent value="history" className="space-y-4">
-              {historyBookings.map((booking) => (
+              {historyBookings.map((booking: any) => (
                 <Card key={booking._id} className="hover:bg-slate-50/50 transition-colors">
                   <div className="p-6 flex flex-col md:flex-row items-center justify-between gap-4">
                     <div className="flex items-center gap-4 w-full">

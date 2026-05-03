@@ -1,44 +1,44 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 
-export const getByConsultant = query({
+export const list = query({
   args: { consultantId: v.id("consultants") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     return await ctx.db
       .query("availability")
-      .withIndex("by_consultant", (q) => q.eq("consultantId", args.consultantId))
+      .withIndex("by_consultant", (q: any) => q.eq("consultantId", args.consultantId))
       .collect();
   },
 });
 
-export const updateAvailability = mutation({
+export const update = mutation({
   args: {
     consultantId: v.id("consultants"),
-    availability: v.array(v.object({
-      dayOfWeek: v.number(),
-      slots: v.array(v.object({
-        start: v.string(),
-        end: v.string(),
-      })),
-      isActive: v.boolean(),
+    dayOfWeek: v.number(),
+    isActive: v.boolean(),
+    slots: v.array(v.object({
+      start: v.string(),
+      end: v.string(),
     })),
   },
-  handler: async (ctx, args) => {
-    // Delete existing
+  handler: async (ctx: any, args: any) => {
+    const { consultantId, dayOfWeek, isActive, slots } = args;
+    
+    // Find existing for this day
     const existing = await ctx.db
       .query("availability")
-      .withIndex("by_consultant", (q) => q.eq("consultantId", args.consultantId))
-      .collect();
+      .withIndex("by_consultant", (q: any) => q.eq("consultantId", consultantId))
+      .filter((q: any) => q.eq(q.field("dayOfWeek"), dayOfWeek))
+      .unique();
     
-    for (const e of existing) {
-      await ctx.db.delete(e._id);
-    }
-
-    // Insert new
-    for (const a of args.availability) {
+    if (existing) {
+      await ctx.db.patch(existing._id, { isActive, slots });
+    } else {
       await ctx.db.insert("availability", {
-        consultantId: args.consultantId,
-        ...a,
+        consultantId,
+        dayOfWeek,
+        isActive,
+        slots,
       });
     }
   },

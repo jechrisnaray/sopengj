@@ -56,7 +56,7 @@ export function RegisterForm() {
       console.log('DEMO MODE: Simulating registration...')
       await new Promise(resolve => setTimeout(resolve, 1500))
       document.cookie = "mock-auth=true; path=/; max-age=86400"
-      document.cookie = `mock-role=${values.role}; path=/; max-age=86400"
+      document.cookie = `mock-role=${values.role}; path=/; max-age=86400`
       
       await syncProfile({
         userId: 'mock-user-' + Math.random().toString(36).substr(2, 9),

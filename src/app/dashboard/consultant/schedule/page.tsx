@@ -58,7 +58,7 @@ export default function SchedulePage() {
 
       <div className="grid gap-6">
         {DAYS.map((day) => {
-          const activeDay = availability?.find(a => a.dayOfWeek === day.id);
+          const activeDay = (availability as any[])?.find((a: any) => a.dayOfWeek === day.id);
           const isActive = activeDay?.isActive ?? false;
 
           return (
@@ -68,7 +68,7 @@ export default function SchedulePage() {
                   <div className="flex items-center gap-4 min-w-[120px]">
                     <Switch 
                       checked={isActive} 
-                      onCheckedChange={(checked) => handleToggleDay(day.id, checked)}
+                      onCheckedChange={(checked: boolean) => handleToggleDay(day.id, checked)}
                     />
                     <Label className="font-bold text-lg">{day.name}</Label>
                   </div>

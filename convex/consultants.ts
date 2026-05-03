@@ -1,90 +1,69 @@
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 export const list = query({
-  args: {
+  args: { 
     specialization: v.optional(v.string()),
     search: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     let consultants = await ctx.db
       .query("consultants")
-      .filter((q) => q.eq(q.field("isAvailable"), true))
+      .filter((q: any) => q.eq(q.field("isAvailable"), true))
       .collect();
 
-    const consultantsWithProfiles = await Promise.all(
-      consultants.map(async (c) => {
-        const profile = await ctx.db.get(c.profileId);
-        return {
-          ...c,
-          fullName: profile?.fullName ?? "Konsultan",
-          avatarUrl: profile?.avatarUrl ?? "",
-          email: profile?.email ?? "",
-        };
-      })
-    );
-
-    let filtered = consultantsWithProfiles;
-
-    if (args.specialization && args.specialization !== "Semua") {
-      filtered = filtered.filter((c) => 
-        c.specializations.includes(args.specialization!)
+    if (args.specialization) {
+      consultants = consultants.filter((c: any) => 
+        c.specializations.includes(args.specialization)
       );
     }
 
     if (args.search) {
       const searchLower = args.search.toLowerCase();
-      filtered = filtered.filter((c) => 
+      consultants = consultants.filter((c: any) => 
         c.fullName.toLowerCase().includes(searchLower) ||
-        c.specializations.some(s => s.toLowerCase().includes(searchLower))
+        c.bio.toLowerCase().includes(searchLower)
       );
     }
 
-    return filtered.sort((a, b) => b.rating - a.rating);
+    return consultants;
   },
 });
 
 export const getById = query({
   args: { id: v.id("consultants") },
-  handler: async (ctx, args) => {
-    const consultant = await ctx.db.get(args.id);
-    if (!consultant) return null;
-
-    const profile = await ctx.db.get(consultant.profileId);
-    return {
-      ...consultant,
-      fullName: profile?.fullName ?? "Konsultan",
-      avatarUrl: profile?.avatarUrl ?? "",
-      bio: consultant.bio || profile?.bio || "",
-    };
+  handler: async (ctx: any, args: any) => {
+    return await ctx.db.get(args.id);
   },
 });
 
 export const getByProfileId = query({
   args: { profileId: v.id("profiles") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     return await ctx.db
       .query("consultants")
-      .withIndex("by_profileId", (q) => q.eq("profileId", args.profileId))
+      .withIndex("by_profileId", (q: any) => q.eq("profileId", args.profileId))
       .unique();
   },
 });
 
-export const register = mutation({
+export const create = mutation({
   args: {
     profileId: v.id("profiles"),
+    fullName: v.string(),
     specializations: v.array(v.string()),
-    experienceYears: v.number(),
     hourlyRate: v.number(),
     bio: v.string(),
-    languages: v.array(v.string()),
+    avatarUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     return await ctx.db.insert("consultants", {
       ...args,
       rating: 5.0,
       totalReviews: 0,
       isAvailable: true,
+      experienceYears: 0,
+      createdAt: Date.now(),
     });
   },
 });
@@ -93,12 +72,11 @@ export const update = mutation({
   args: {
     id: v.id("consultants"),
     specializations: v.optional(v.array(v.string())),
-    experienceYears: v.optional(v.number()),
     hourlyRate: v.optional(v.number()),
     bio: v.optional(v.string()),
     isAvailable: v.optional(v.boolean()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
   },

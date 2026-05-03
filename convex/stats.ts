@@ -3,23 +3,23 @@ import { query } from "./_generated/server";
 
 export const getConsultantStats = query({
   args: { consultantId: v.id("consultants") },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const bookings = await ctx.db
       .query("bookings")
-      .withIndex("by_consultant", (q) => q.eq("consultantId", args.consultantId))
+      .withIndex("by_consultant", (q: any) => q.eq("consultantId", args.consultantId))
       .collect();
 
-    const completed = bookings.filter(b => b.status === "completed");
-    const totalIncome = completed.reduce((acc, curr) => acc + curr.totalPrice, 0);
-    const pendingCount = bookings.filter(b => b.status === "pending").length;
+    const completed = bookings.filter((b: any) => b.status === "completed");
+    const totalIncome = completed.reduce((acc: number, curr: any) => acc + curr.totalPrice, 0);
+    const pending = bookings.filter((b: any) => b.status === "pending").length;
 
     const consultant = await ctx.db.get(args.consultantId);
 
     return {
       totalSessions: completed.length,
-      rating: consultant?.rating ?? 0,
       totalIncome,
-      pendingCount,
+      pendingRequests: pending,
+      rating: consultant?.rating ?? 0,
     };
   },
 });

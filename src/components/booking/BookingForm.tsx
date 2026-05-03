@@ -85,7 +85,7 @@ export function BookingForm({ consultant }: BookingFormProps) {
     <div className="max-w-4xl mx-auto space-y-6">
       {/* Progress Indicator */}
       <div className="flex items-center justify-between px-4 mb-8">
-        {[1, 2, 3].map((i) => (
+        {[1, 2, 3].map((i: number) => (
           <div key={i} className="flex flex-col items-center space-y-2 flex-1">
             <div className={`flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold transition-all ${
               step >= i ? 'bg-blue-600 text-white shadow-lg shadow-blue-200' : 'bg-slate-100 text-slate-400'

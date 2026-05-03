@@ -39,7 +39,7 @@ export function ConsultantList() {
         <ErrorBoundary>
           {isLoading ? (
             <div className="grid gap-6 md:grid-cols-2">
-              {[1, 2, 3, 4].map(i => (
+              {[1, 2, 3, 4].map((i: number) => (
                 <div key={i} className="rounded-2xl border bg-white p-6 shadow-sm animate-pulse">
                   <div className="flex gap-4 mb-4">
                     <div className="h-16 w-16 rounded-full bg-slate-200" />

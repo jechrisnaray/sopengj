@@ -43,13 +43,13 @@ async function fetchConsultantsForAI(): Promise<ConsultantForAI[]> {
     console.warn('[AI] Using mock data for recommendation engine', err)
     return MOCK_CONSULTANTS.map(c => ({
       id: c.id,
-      fullName: c.full_name,
+      fullName: c.fullName,
       specializations: c.specializations,
-      experienceYears: c.experience_years,
+      experienceYears: c.experienceYears,
       rating: c.rating,
-      totalReviews: c.total_reviews,
-      hourlyRate: c.hourly_rate,
-      isAvailable: c.is_available,
+      totalReviews: c.totalReviews,
+      hourlyRate: c.hourlyRate,
+      isAvailable: c.isAvailable,
       languages: ['Indonesia']
     }))
   }

@@ -3,10 +3,10 @@ import { mutation, query } from "./_generated/server";
 
 export const getByUserId = query({
   args: { userId: v.string() },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     return await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .unique();
   },
 });
@@ -19,10 +19,10 @@ export const syncProfile = mutation({
     role: v.union(v.literal("user"), v.literal("consultant")),
     avatarUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const existing = await ctx.db
       .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .withIndex("by_userId", (q: any) => q.eq("userId", args.userId))
       .unique();
 
     if (existing) {
@@ -53,7 +53,7 @@ export const updateProfile = mutation({
     phone: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
+  handler: async (ctx: any, args: any) => {
     const { id, ...updates } = args;
     await ctx.db.patch(id, updates);
   },

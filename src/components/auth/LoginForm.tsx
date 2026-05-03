@@ -46,7 +46,7 @@ export function LoginForm() {
       await new Promise(resolve => setTimeout(resolve, 1000))
       document.cookie = "mock-auth=true; path=/; max-age=86400"
       const role = values.email.includes('consultant') ? 'consultant' : 'user'
-      document.cookie = `mock-role=${role}; path=/; max-age=86400"
+      document.cookie = `mock-role=${role}; path=/; max-age=86400`
       
       // Sync to Convex even in mock
       await syncProfile({
