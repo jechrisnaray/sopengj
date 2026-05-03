@@ -1,8 +1,11 @@
-export const SITE_CONFIG = {
-  name: 'KonsulIn',
-  description: 'Platform Konsultasi Online No. 1 di Indonesia',
-  url: process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
-}
+export const APP_NAME = 'KonsulIn';
+export const APP_DESCRIPTION = 'Platform Konsultasi Online Terpercaya';
+
+export const RATE_LIMITS = {
+  GROQ_DAILY_MAX: 14400,
+  GEMINI_DAILY_MAX: 1500,
+  CACHE_TTL_SECONDS: 3600, // 1 jam
+} as const;
 
 export const CATEGORIES = [
   'Hukum',
@@ -10,25 +13,15 @@ export const CATEGORIES = [
   'Psikologi',
   'Karir',
   'Bisnis',
+  'Teknologi',
   'Kesehatan',
-  'Lainnya'
-]
+  'Pendidikan'
+] as const;
 
-export const BOOKING_STATUS = {
-  PENDING: 'pending',
-  CONFIRMED: 'confirmed',
-  COMPLETED: 'completed',
-  CANCELLED: 'cancelled'
-}
+export const CONSULTATION_TYPES = [
+  { value: 'video', label: 'Video Call' },
+  { value: 'chat', label: 'Chat' },
+  { value: 'phone', label: 'Telepon' }
+] as const;
 
-export const SESSION_DURATIONS = [
-  { label: '30 Menit', value: 30 },
-  { label: '60 Menit', value: 60 },
-  { label: '90 Menit', value: 90 }
-]
-
-export const ROLES = {
-  USER: 'user',
-  CONSULTANT: 'consultant',
-  ADMIN: 'admin'
-}
+export const BOOKING_DURATIONS = [30, 60, 90] as const;

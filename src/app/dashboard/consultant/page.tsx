@@ -8,9 +8,13 @@ import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { format } from 'date-fns'
 import { toast } from 'sonner'
+import { formatRupiah } from '@/lib/utils/format'
 import { Users, Star, Banknote, CalendarCheck, Check, X, Clock } from 'lucide-react'
 
+import { useBookingsRealtime } from '@/hooks/useBookingsRealtime'
+
 export default function ConsultantDashboard() {
+  useBookingsRealtime()
   const [bookings, setBookings] = useState<any[]>([])
   const [stats, setStats] = useState({ totalSessions: 0, rating: 0, income: 0 })
   const [isLoading, setIsLoading] = useState(true)

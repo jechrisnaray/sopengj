@@ -13,7 +13,10 @@ import { Calendar, Clock, MessageSquare, Bell, XCircle, CheckCircle2 } from 'luc
 import { toast } from 'sonner'
 import Link from 'next/link'
 
+import { useBookingsRealtime } from '@/hooks/useBookingsRealtime'
+
 export default function UserDashboard() {
+  useBookingsRealtime()
   const [bookings, setBookings] = useState<any[]>([])
   const [notifications, setNotifications] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)

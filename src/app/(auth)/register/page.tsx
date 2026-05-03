@@ -43,13 +43,28 @@ export default function RegisterPage() {
   async function onSubmit(values: RegisterFormValues) {
     setIsLoading(true)
     
-    // DEMO MODE: Simulate successful registration
-    console.log('Registering user:', values.fullName)
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    toast.success('Registrasi berhasil! (Demo Mode)')
-    router.push('/dashboard/user')
-    setIsLoading(false)
+    try {
+      const { error } = await supabase.auth.signUp({
+        email: values.email,
+        password: values.password,
+        options: {
+          data: {
+            full_name: values.fullName,
+          },
+        },
+      })
+
+      if (error) {
+        toast.error(error.message)
+      } else {
+        toast.success('Registrasi berhasil! Silakan cek email Anda untuk verifikasi.')
+        router.push('/login')
+      }
+    } catch (error) {
+      toast.error('Terjadi kesalahan saat registrasi. Silakan coba lagi.')
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   return (
