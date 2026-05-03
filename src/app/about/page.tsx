@@ -50,7 +50,7 @@ export default function AboutPage() {
                 Didirikan pada tahun 2024, KonsulIn melihat kesenjangan besar antara orang yang membutuhkan saran ahli dengan para pakar yang sulit dijangkau. Seringkali, mendapatkan waktu konsultasi membutuhkan waktu berminggu-minggu dan proses yang rumit.
               </p>
               <p>
-                Kami membangun platform ini dengan satu tujuan sederhana: **Memberikan solusi instan.** Baik itu masalah hukum yang mendesak, perencanaan keuangan keluarga, hingga kesehatan mental, kami percaya setiap orang berhak mendapatkan saran dari yang terbaik.
+                Kami membangun platform ini dengan satu tujuan sederhana: <strong>Memberikan solusi instan.</strong> Baik itu masalah hukum yang mendesak, perencanaan keuangan keluarga, hingga kesehatan mental, kami percaya setiap orang berhak mendapatkan saran dari yang terbaik.
               </p>
             </div>
           </div>

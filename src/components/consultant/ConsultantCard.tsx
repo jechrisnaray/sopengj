@@ -17,6 +17,8 @@ interface ConsultantCardProps {
   }
 }
 
+import { formatRupiah } from '@/lib/utils/format'
+
 export function ConsultantCard({ consultant }: ConsultantCardProps) {
   return (
     <Card className="group overflow-hidden border-slate-200 transition-all hover:border-blue-300 hover:shadow-lg">
@@ -55,9 +57,9 @@ export function ConsultantCard({ consultant }: ConsultantCardProps) {
         <div className="mt-6 flex items-center justify-between border-t pt-4">
           <div>
             <p className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Mulai dari</p>
-            <p className="text-lg font-bold text-blue-600">
-              Rp {consultant.hourly_rate.toLocaleString('id-ID')}
-              <span className="text-sm font-normal text-slate-400">/jam</span>
+            <p>
+                <span className="text-lg font-bold text-slate-900">{formatRupiah(consultant.hourly_rate)}</span>
+                <span className="text-sm font-normal text-slate-400">/jam</span>
             </p>
           </div>
           <div className="flex items-center text-xs text-slate-500">

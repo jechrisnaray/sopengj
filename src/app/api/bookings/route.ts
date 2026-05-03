@@ -41,6 +41,10 @@ export async function GET(request: Request) {
       status: 'confirmed',
       topic: 'Konsultasi Hukum Perdata',
       total_price: 500000,
+      user_profile: {
+        full_name: 'User Demo',
+        avatar_url: ''
+      },
       consultants: {
         id: 'f1111111-1111-1111-1111-111111111111',
         profiles: { full_name: 'Budi Arto, S.H.', avatar_url: '' }

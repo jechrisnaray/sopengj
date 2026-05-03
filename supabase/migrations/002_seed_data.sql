@@ -2,8 +2,10 @@
 -- SEED DATA UNTUK KONSULIN
 -- ========================================================
 
--- NOTE: UUID ini adalah dummy. 
--- Dalam produksi, profil harus terhubung ke auth.users yang valid.
+-- CATATAN: Jalankan script ini hanya di local development.
+-- Di production, gunakan Supabase Auth untuk membuat user,
+-- lalu profile otomatis dibuat via trigger handle_new_user().
+-- UUID di bawah harus diganti dengan UUID dari auth.users yang valid.
 
 -- 1. INSERT PROFILES
 INSERT INTO profiles (id, full_name, avatar_url, role)

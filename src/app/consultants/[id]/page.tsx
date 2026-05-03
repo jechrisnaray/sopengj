@@ -15,7 +15,7 @@ export default async function ConsultantProfilePage({ params }: { params: Promis
     .from('consultants')
     .select(`
       *,
-      profiles:profile_id (full_name, avatar_url, bio)
+      profiles:profile_id (full_name, avatar_url)
     `)
     .eq('id', id)
     .single()
@@ -28,7 +28,7 @@ export default async function ConsultantProfilePage({ params }: { params: Promis
       ...consultant,
       full_name: consultant.profiles.full_name,
       avatar_url: consultant.profiles.avatar_url,
-      bio: consultant.profiles.bio || 'Ahli berpengalaman di bidangnya.'
+      bio: consultant.bio || 'Ahli berpengalaman di bidangnya.'
     }
   } else {
     const mock = MOCK_CONSULTANTS.find(c => c.id === id) || MOCK_CONSULTANTS[0]

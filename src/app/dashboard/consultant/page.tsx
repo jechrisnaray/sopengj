@@ -38,7 +38,7 @@ export default function ConsultantDashboard() {
       .from('bookings')
       .select(`
         *,
-        user:user_id (full_name, avatar_url)
+        user_profile:user_id (full_name, avatar_url)
       `)
       .eq('consultant_id', consultant.id)
       .order('scheduled_at', { ascending: true })
@@ -80,7 +80,7 @@ export default function ConsultantDashboard() {
       <div className="grid gap-4 md:grid-cols-4">
         <StatCard title="Total Sesi" value={stats.totalSessions} icon={<Users className="h-5 w-5 text-blue-600" />} />
         <StatCard title="Rating" value={`${stats.rating}/5`} icon={<Star className="h-5 w-5 text-amber-500 fill-current" />} />
-        <StatCard title="Pendapatan" value={`Rp ${stats.income.toLocaleString()}`} icon={<Banknote className="h-5 w-5 text-green-600" />} />
+        <StatCard title="Pendapatan" value={formatRupiah(stats.income)} icon={<Banknote className="h-5 w-5 text-green-600" />} />
         <StatCard title="Antrean" value={pendingBookings.length} icon={<Clock className="h-5 w-5 text-orange-500" />} />
       </div>
 
@@ -97,11 +97,11 @@ export default function ConsultantDashboard() {
               <div key={b.id} className="flex items-center justify-between p-4 border rounded-lg bg-slate-50/50">
                 <div className="flex items-center gap-3">
                   <Avatar>
-                    <AvatarImage src={b.user.avatar_url} />
+                    <AvatarImage src={b.user_profile.avatar_url} />
                     <AvatarFallback>U</AvatarFallback>
                   </Avatar>
                   <div>
-                    <p className="text-sm font-bold">{b.user.full_name}</p>
+                    <p className="text-sm font-bold">{b.user_profile.full_name}</p>
                     <p className="text-[11px] text-slate-500">{format(new Date(b.scheduled_at), 'dd MMM, HH:mm')}</p>
                   </div>
                 </div>
@@ -134,7 +134,7 @@ export default function ConsultantDashboard() {
                   </div>
                   <div className="flex-grow">
                     <p className="text-sm font-bold">{b.topic}</p>
-                    <p className="text-xs text-slate-500">Klien: {b.user.full_name} • {format(new Date(b.scheduled_at), 'HH:mm')}</p>
+                    <p className="text-xs text-slate-500">Klien: {b.user_profile.full_name} • {format(new Date(b.scheduled_at), 'HH:mm')}</p>
                   </div>
                   <Badge variant="secondary">Siap</Badge>
                 </div>

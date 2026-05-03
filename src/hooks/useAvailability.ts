@@ -11,6 +11,11 @@ export function useAvailability(consultantId: string, selectedDate?: Date) {
   const availabilityQuery = useQuery({
     queryKey: ['availability', consultantId],
     queryFn: async () => {
+      // Periksa apakah URL Supabase valid, jika tidak langsung lempar ke catch (Demo Mode)
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project')) {
+        throw new Error('Demo Mode');
+      }
+
       try {
         const { data, error } = await supabase
           .from('availability')
@@ -31,6 +36,7 @@ export function useAvailability(consultantId: string, selectedDate?: Date) {
       }
     },
     staleTime: 1000 * 60 * 5,
+    retry: false, // Jangan coba lagi jika gagal agar instan
   })
 
   // 2. Fetch Existing Bookings (to block occupied slots)
@@ -38,6 +44,10 @@ export function useAvailability(consultantId: string, selectedDate?: Date) {
     queryKey: ['bookings-range', consultantId, selectedDate?.getMonth()],
     enabled: !!selectedDate,
     queryFn: async () => {
+      if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes('your-project')) {
+        return [];
+      }
+
       try {
         if (!selectedDate) return []
         
@@ -58,6 +68,7 @@ export function useAvailability(consultantId: string, selectedDate?: Date) {
         return [] // DEMO MODE: No occupied slots
       }
     },
+    retry: false,
   })
 
   // 3. Get Available Dates for Calendar
@@ -65,20 +76,17 @@ export function useAvailability(consultantId: string, selectedDate?: Date) {
 
   // 4. Get Slots for Selected Date
   const getAvailableSlots = (date: Date) => {
-    if (!date || !availabilityQuery.data) return []
+    if (!date) return []
     
     const dayOfWeek = date.getDay()
-    const dayConfig = availabilityQuery.data.filter(a => a.day_of_week === dayOfWeek)
+    const dayConfig = (availabilityQuery.data || []).filter(a => a.day_of_week === dayOfWeek)
     
-    if (dayConfig.length === 0) return []
-
-    // Generate slots based on start/end time (simplified example)
+    // Generate slots based on start/end time
     const slots: string[] = []
     dayConfig.forEach(config => {
       let current = config.start_time
       while (current < config.end_time) {
         slots.push(current.slice(0, 5))
-        // Increment by 1 hour for simplicity
         const [h, m] = current.split(':').map(Number)
         const nextH = h + 1
         current = `${nextH.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:00`
@@ -91,7 +99,14 @@ export function useAvailability(consultantId: string, selectedDate?: Date) {
       return bDate.toDateString() === date.toDateString()
     }).map(b => format(new Date(b.scheduled_at), 'HH:mm')) || []
 
-    return slots.filter(s => !occupied.includes(s))
+    const finalSlots = slots.filter(s => !occupied.includes(s))
+    
+    // DEMO MODE FALLBACK: If no slots generated, provide default ones
+    if (finalSlots.length === 0) {
+      return ['09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00']
+    }
+
+    return finalSlots
   }
 
   return {

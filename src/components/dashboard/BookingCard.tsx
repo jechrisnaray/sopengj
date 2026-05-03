@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Calendar, Clock, MessageSquare, MoreVertical } from "lucide-react"
 import { formatDateTime, formatRupiah } from "@/lib/utils/format"
-import { cn } from "@/lib/utils/cn"
+import { cn } from "@/lib/utils"
 
 interface BookingCardProps {
   booking: any
@@ -14,7 +14,7 @@ interface BookingCardProps {
 
 export function BookingCard({ booking, role, onStatusUpdate }: BookingCardProps) {
   const isConsultant = role === 'consultant'
-  const targetUser = isConsultant ? booking.user_profiles : booking.consultants?.profiles
+  const targetUser = isConsultant ? booking.user_profile : booking.consultants?.profiles
 
   const statusColors = {
     pending: 'bg-amber-100 text-amber-700',

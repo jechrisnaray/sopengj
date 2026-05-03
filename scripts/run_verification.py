@@ -9,7 +9,7 @@ load_dotenv()
 
 # Konfigurasi Supabase
 url: str = os.getenv("SUPABASE_URL")
-key: str = os.getenv("SUPABASE_SERVICE_KEY")
+key: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 supabase: Client = create_client(url, key)
 
 async def run_batch_verification():

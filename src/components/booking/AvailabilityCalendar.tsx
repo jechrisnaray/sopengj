@@ -27,8 +27,8 @@ export function AvailabilityCalendar({
         disabled={(date) => {
           const today = new Date()
           today.setHours(0, 0, 0, 0)
-          // Disable past dates and days with no availability
-          return date < today || !isAvailableDay(date)
+          // In Demo Mode, only disable past dates. Allow all future dates.
+          return date < today
         }}
         initialFocus
         // Highlight available days with a dot or background (via modifiers)

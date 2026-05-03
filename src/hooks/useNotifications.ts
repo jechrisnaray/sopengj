@@ -1,15 +1,16 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
 
 export function useNotifications() {
   const [unreadCount, setUnreadCount] = useState(0)
   const supabase = createClient()
+  const channelRef = useRef<any>(null)
 
   useEffect(() => {
-    let channel: any
+    if (channelRef.current) return
 
     const setup = async () => {
       const { data: { user } } = await supabase.auth.getUser()
@@ -25,7 +26,7 @@ export function useNotifications() {
       setUnreadCount(count || 0)
 
       // 2. Subscribe to realtime changes
-      channel = supabase
+      channelRef.current = supabase
         .channel(`user-notifications-${user.id}`)
         .on(
           'postgres_changes',
@@ -48,7 +49,10 @@ export function useNotifications() {
     setup()
 
     return () => {
-      if (channel) supabase.removeChannel(channel)
+      if (channelRef.current) {
+        supabase.removeChannel(channelRef.current)
+        channelRef.current = null
+      }
     }
   }, [supabase])
 

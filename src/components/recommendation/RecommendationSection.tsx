@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
 import { Textarea } from '@/components/ui/textarea'
@@ -11,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { Badge } from '@/components/ui/badge'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Skeleton } from '@/components/ui/skeleton'
+import { formatRupiah } from '@/lib/utils/format'
 import { Sparkles, Star, Clock, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -38,6 +40,7 @@ export default function RecommendationSection() {
 
     setIsLoading(true)
     try {
+      // 1. Get Recommendations
       const response = await fetch('/api/recommendations', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -51,7 +54,20 @@ export default function RecommendationSection() {
       const data = await response.json()
       if (!response.ok) throw new Error(data.error)
       
-      setResults(data)
+      // 2. Fetch All Consultants to merge info
+      const consResponse = await fetch('/api/consultants')
+      const consultants = await consResponse.json()
+
+      // 3. Merge data
+      const mergedRecommendations = data.recommendations.map((rec: Recommendation) => {
+        const fullInfo = consultants.find((c: any) => c.id === rec.consultant_id)
+        return {
+          ...rec,
+          consultant_info: fullInfo
+        }
+      })
+
+      setResults({ ...data, recommendations: mergedRecommendations })
       toast.success('Rekomendasi berhasil dibuat!')
     } catch (error: any) {
       toast.error(error.message || 'Gagal mendapatkan rekomendasi')
@@ -88,7 +104,7 @@ export default function RecommendationSection() {
             <div className="space-y-4">
               <div className="flex justify-between">
                 <Label>Budget per jam</Label>
-                <span className="text-sm font-medium text-blue-600">Rp {budget[0].toLocaleString()}</span>
+                <span className="text-sm font-medium text-blue-600">{formatRupiah(budget[0])}</span>
               </div>
               <Slider 
                 value={budget} 
@@ -173,13 +189,20 @@ export default function RecommendationSection() {
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-12 w-12 border-2 border-white shadow-sm">
-                      <AvatarFallback className="bg-blue-50 text-blue-600">C</AvatarFallback>
+                      <AvatarImage src={rec.consultant_info?.avatar_url} />
+                      <AvatarFallback className="bg-blue-50 text-blue-600">
+                        {rec.consultant_info?.full_name?.charAt(0) || 'C'}
+                      </AvatarFallback>
                     </Avatar>
                     <div>
-                      <CardTitle className="text-base">Ahli Terpilih</CardTitle>
+                      <CardTitle className="text-base truncate max-w-[150px]">
+                        {rec.consultant_info?.full_name || 'Ahli Terpilih'}
+                      </CardTitle>
                       <div className="flex items-center gap-1 text-sm text-amber-500">
                         <Star className="h-3 w-3 fill-current" />
-                        <span className="text-slate-600 font-medium text-xs">Skor: {rec.score}%</span>
+                        <span className="text-slate-600 font-medium text-xs">
+                          {rec.consultant_info?.rating || '0'} • Skor: {rec.score}%
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -218,9 +241,11 @@ export default function RecommendationSection() {
                 </CardContent>
                 
                 <CardFooter className="pt-0">
-                  <Button className="w-full group" variant="outline" size="sm">
-                    Booking Sekarang
-                    <ArrowRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                  <Button className="w-full group" variant="outline" size="sm" asChild>
+                    <Link href={`/consultants/${rec.consultant_id}?book=true`}>
+                      Booking Sekarang
+                      <ArrowRight className="ml-2 h-3 w-3 transition-transform group-hover:translate-x-1" />
+                    </Link>
                   </Button>
                 </CardFooter>
               </Card>

@@ -13,6 +13,7 @@ import { TimeSlotPicker } from './TimeSlotPicker'
 import { format } from 'date-fns'
 import { id } from 'date-fns/locale'
 import { toast } from 'sonner'
+import { formatRupiah } from '@/lib/utils/format'
 import { Check, ArrowRight, ArrowLeft, CalendarDays, Clock, MessageSquare, CreditCard } from 'lucide-react'
 
 import { Consultant } from '@/types'
@@ -218,7 +219,7 @@ export function BookingForm({ consultant }: BookingFormProps) {
                 <div className="p-4 flex justify-between">
                   <span className="text-slate-500 text-lg font-bold">Total Pembayaran</span>
                   <span className="text-lg font-bold text-blue-600">
-                    Rp {totalPrice.toLocaleString('id-ID')}
+                    {formatRupiah(totalPrice)}
                   </span>
                 </div>
               </div>

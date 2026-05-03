@@ -45,11 +45,7 @@ export function ConsultantList() {
               {consultants?.map((c: any) => (
                 <ConsultantCard 
                   key={c.id} 
-                  consultant={{
-                    ...c,
-                    full_name: c.profiles?.full_name || 'Konsultan',
-                    avatar_url: c.profiles?.avatar_url || ''
-                  }} 
+                  consultant={c} 
                 />
               ))}
             </div>

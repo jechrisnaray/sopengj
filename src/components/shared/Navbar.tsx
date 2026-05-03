@@ -20,16 +20,26 @@ import { type User as SupabaseUser } from '@supabase/supabase-js'
 
 export default function Navbar() {
   const [user, setUser] = useState<SupabaseUser | null>(null)
+  const [profile, setProfile] = useState<any>(null)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
   const supabase = createClient()
   const router = useRouter()
 
   useEffect(() => {
-    const getUser = async () => {
+    const getUserData = async () => {
       const { data: { user } } = await supabase.auth.getUser()
       setUser(user)
+      
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single()
+        setProfile(profile)
+      }
     }
-    getUser()
+    getUserData()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ?? null)
@@ -72,9 +82,9 @@ export default function Navbar() {
               <DropdownMenuTrigger>
                 <div className="relative h-10 w-10 rounded-full cursor-pointer hover:opacity-80 transition-opacity">
                   <Avatar className="h-10 w-10 border border-slate-200">
-                    <AvatarImage src={user.user_metadata?.avatar_url} />
+                    <AvatarImage src={profile?.avatar_url || user.user_metadata?.avatar_url} />
                     <AvatarFallback className="bg-blue-100 text-blue-700">
-                      {user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)}
+                      {profile?.full_name?.charAt(0) || user.user_metadata?.full_name?.charAt(0) || user.email?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
                 </div>
@@ -83,7 +93,7 @@ export default function Navbar() {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {user.user_metadata?.full_name || 'User'}
+                      {profile?.full_name || user.user_metadata?.full_name || 'User'}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
                       {user.email}
