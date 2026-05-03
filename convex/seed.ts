@@ -57,6 +57,7 @@ export const seed = mutation({
         email: item.email,
         role: item.role,
         avatarUrl: item.avatarUrl,
+        createdAt: Date.now(),
       });
 
       await ctx.db.insert("consultants", {
