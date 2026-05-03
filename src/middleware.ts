@@ -7,7 +7,7 @@ const PUBLIC_ROUTES = ['/login', '/register']
 // Route yang HANYA bisa diakses saat BELUM login
 const AUTH_ONLY_ROUTES = ['/login', '/register']
 
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
   const { pathname } = request.nextUrl
 

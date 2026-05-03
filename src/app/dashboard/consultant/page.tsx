@@ -40,10 +40,25 @@ export default function ConsultantDashboard() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center animate-pulse">
-        <div className="h-10 w-64 bg-slate-200 mx-auto mb-8 rounded" />
-        <div className="grid gap-4 md:grid-cols-4 mb-8">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-slate-100 rounded-xl" />)}
+      <div className="container mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500">
+        <div className="flex justify-between items-end">
+          <div className="space-y-2">
+            <div className="h-10 w-64 bg-slate-200 animate-pulse rounded-xl" />
+            <div className="h-5 w-48 bg-slate-100 animate-pulse rounded-lg" />
+          </div>
+          <div className="flex gap-2">
+            <div className="h-10 w-24 bg-slate-100 animate-pulse rounded-xl" />
+            <div className="h-10 w-32 bg-slate-200 animate-pulse rounded-xl" />
+          </div>
+        </div>
+        <div className="grid gap-6 md:grid-cols-4">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-32 bg-slate-50 animate-pulse rounded-2xl border border-slate-100" />
+          ))}
+        </div>
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-2 h-[500px] bg-slate-50 animate-pulse rounded-2xl" />
+          <div className="lg:col-span-1 h-[500px] bg-slate-50 animate-pulse rounded-2xl" />
         </div>
       </div>
     );

@@ -36,10 +36,20 @@ export default function UserDashboard() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto px-4 py-20 text-center">
-        <div className="animate-pulse space-y-4">
-          <div className="h-8 w-48 bg-slate-200 mx-auto rounded" />
-          <div className="h-64 bg-slate-100 rounded-xl" />
+      <div className="container mx-auto px-4 py-8 space-y-8 animate-in fade-in duration-500">
+        <div className="flex justify-between items-center">
+          <div className="h-10 w-48 bg-slate-200 animate-pulse rounded-xl" />
+          <div className="h-10 w-32 bg-slate-100 animate-pulse rounded-xl" />
+        </div>
+        <div className="grid gap-8 lg:grid-cols-4">
+          <div className="lg:col-span-1 space-y-6">
+            <div className="h-64 bg-slate-100 animate-pulse rounded-2xl" />
+            <div className="h-64 bg-slate-50 animate-pulse rounded-2xl" />
+          </div>
+          <div className="lg:col-span-3 space-y-6">
+            <div className="h-12 bg-slate-100 animate-pulse rounded-xl" />
+            <div className="h-[400px] bg-slate-50 animate-pulse rounded-2xl" />
+          </div>
         </div>
       </div>
     );
